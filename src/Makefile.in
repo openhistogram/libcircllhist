@@ -80,6 +80,9 @@ reversion:
 circllhist_version.h:
 	@$(top_srcdir)/buildtools/mkversion.sh circllhist_version.h
 
+histogram_test:	histogram_test.c
+	$(Q)$(CC) $(CPPFLAGS) $(CFLAGS) -I. -o $@ histogram_test.c -lm -L. -lcircllhist
+
 $(LIBCIRCLLHIST):	$(LIBCIRCLLHIST_V)
 	ln -sf $(LIBCIRCLLHIST_V) $(LIBCIRCLLHIST)
 
@@ -112,6 +115,8 @@ install-libs:    $(LIBCIRCLLHIST)
 	ln -sf $(LIBCIRCLLHIST_V) $(DESTDIR)$(libdir)/$(LIBCIRCLLHIST)
 
 install:	install-dirs install-headers install-libs 
+
+tests: histogram_test
 
 clean:
 	rm -f *.lo *.o $(TARGETS)
