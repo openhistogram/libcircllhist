@@ -108,7 +108,7 @@ install-headers:	$(HEADERS)
 		$(INSTALL) -m 0644 $$file $(DESTDIR)$(includedir)/$$file ; \
 	done
 
-install-libs:    $(LIBCIRCLLHIST)
+install-libs:    $(LIBCIRCLLHIST) $(LUA_FFI)
 	$(top_srcdir)/buildtools/mkinstalldirs $(DESTDIR)$(libdir)
 	$(top_srcdir)/buildtools/mkinstalldirs $(DESTDIR)$(libdir)/circllhist
 	$(INSTALL) -m 0755 $(LIBCIRCLLHIST_V) $(DESTDIR)$(libdir)/$(LIBCIRCLLHIST_V)
