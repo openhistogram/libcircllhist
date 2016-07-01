@@ -92,7 +92,7 @@ $(LIBCIRCLLHIST):	$(LIBCIRCLLHIST_V)
 
 $(LIBCIRCLLHIST_V):	$(LIBCIRCLLHIST_OBJS)
 	@echo "- linking $@"
-	$(SHLD) $(SHLDFLAGS) $(CFLAGS) -o $@ $(LIBCIRCLLHIST_OBJS) -lmtev
+	$(SHLD) $(SHLDFLAGS) $(CFLAGS) -o $@ $(LIBCIRCLLHIST_OBJS) -lmtev -luuid
 
 .c.lo:
 		echo "- compiling $<" ; \
