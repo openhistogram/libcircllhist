@@ -7,6 +7,9 @@ install:	all
 clean:
 	(cd src && $(MAKE) clean)
 
+tests:
+	(cd src && $(MAKE) tests)
+
 distclean: 	clean
 	rm -f Makefile config.status config.log
 	(cd src && $(MAKE) distclean)
