@@ -81,18 +81,18 @@ reversion:
 circllhist_version.h:
 	@$(top_srcdir)/buildtools/mkversion.sh circllhist_version.h
 
-test/histogram_test:	test/histogram_test.c
-	$(Q)$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -I. -o $@ test/histogram_test.c -lm -luuid -lmtev -L. -L.. -lcircllhist
-
-$(LUA_FFI): 
-	./generateLuaFiles.sh . $@
-
 $(LIBCIRCLLHIST):	$(LIBCIRCLLHIST_V)
 	ln -sf $(LIBCIRCLLHIST_V) $(LIBCIRCLLHIST)
 
 $(LIBCIRCLLHIST_V):	$(LIBCIRCLLHIST_OBJS)
 	@echo "- linking $@"
 	$(SHLD) $(SHLDFLAGS) $(CFLAGS) -o $@ $(LIBCIRCLLHIST_OBJS) -lmtev
+
+test/histogram_test: test/histogram_test.c $(LIBCIRCLLHIST)
+	$(Q)$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -I. -o $@ test/histogram_test.c -lm -luuid -lmtev -L. -L.. -lcircllhist
+
+$(LUA_FFI): 
+	./generateLuaFiles.sh . $@
 
 .c.lo:
 		echo "- compiling $<" ; \
