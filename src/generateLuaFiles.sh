@@ -13,6 +13,11 @@ cdef_content=`cat $src_dir/circllhist.h | egrep -v "#if|#endif|#define|#include"
 typedef long int ssize_t;
 '`
 
+D=`dirname $dst_file`
+if [ ! -e $D ]; then
+    mkdir $D
+fi
+
 cat > $dst_file <<EOF
 local ffi = require('ffi');
 
