@@ -9,9 +9,13 @@ fi
 src_dir=$1
 dst_file=$2
 
-cdef_content=`cat $src_dir/circllhist.h | egrep -v "#if|#endif|#define|#include" | sed 's/u_int/uint/g' | sed 's/API_EXPORT(\([a-z0-9_]*\))/\1/g' | sed '/typedef struct histogram histogram_t;/ i\ 
-typedef long int ssize_t;
-'`
+if [ -x /usr/bin/gsed ]; then
+    SED=gsed
+else
+    SED=sed
+fi
+
+cdef_content=`cat $src_dir/circllhist.h | egrep -v "#if|#endif|#define|#include" | $SED 's/u_int/uint/g' | $SED 's/API_EXPORT(\([a-z0-9_]*\))/\1/g' | $SED '/typedef struct histogram histogram_t;/ i\typedef long int ssize_t;\n'`
 
 D=`dirname $dst_file`
 if [ ! -e $D ]; then
