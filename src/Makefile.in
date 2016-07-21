@@ -112,7 +112,7 @@ install-libs:    $(LIBCIRCLLHIST) $(LUA_FFI)
 	$(top_srcdir)/buildtools/mkinstalldirs $(DESTDIR)$(libdir)
 	$(INSTALL) -m 0755 $(LIBCIRCLLHIST_V) $(DESTDIR)$(libdir)/$(LIBCIRCLLHIST_V)
 	ln -sf $(LIBCIRCLLHIST_V) $(DESTDIR)$(libdir)/$(LIBCIRCLLHIST)
-	$(INSTALL) -m 0755 $(LUA_FFI) $(datadir)/lua/5.1/
+	$(INSTALL) -m 0755 $(LUA_FFI) $(DESTDIR)$(datadir)/lua/5.1/
 
 install:	install-headers install-libs
 
