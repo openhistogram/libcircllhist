@@ -137,7 +137,6 @@ AC_CHECK_SIZEOF(void *, 1)
 
 AC_CHECK_HEADER(mtev_config.h, [], [AC_MSG_ERROR(*** libmtev (headers) required ***)])
 AC_CHECK_LIB(mtev, mtev_main, , [AC_MSG_ERROR(*** libmtev is required ***)])
-AC_CHECK_LIB(uuid, uuid_unparse_lower, , [AC_MSG_ERROR(*** libuuid is required ***)])
 AC_CHECK_LIB(umem, umem_cache_create, , )
 AC_CHECK_LIB(z, compress2, , [AC_MSG_ERROR([*** zlib is required ***])])
 AC_CHECK_LIB(rt, sem_init, , [
