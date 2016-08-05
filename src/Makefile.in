@@ -1,5 +1,7 @@
 .SUFFIXES: .lo .re .c
 
+OS=$(shell uname)
+
 Q=
 ifeq ($(V),)
 	Q=@
@@ -63,6 +65,11 @@ WHOLE_ARCHIVE=@WHOLE_ARCHIVE@
 NOWHOLE_ARCHIVE=@NOWHOLE_ARCHIVE@
 LIBCIRCLLHIST_V=libcircllhist@DOTSO@.$(LIBCIRCLLHIST_VERSION)@DOTDYLIB@
 LIBCIRCLLHIST=libcircllhist@DOTSO@@DOTDYLIB@
+
+ifeq ($(OS),Darwin)
+SHLDFLAGS+=-current_version $(LIBCIRCLLHIST_VERSION) -install_name $(libdir)/$(LIBCIRCLLHIST_V)
+endif
+
 LUA_FFI=lua/ffi_libcircllhist.lua
 
 TARGETS=$(LIBCIRCLLHIST) $(LUA_FFI) test/histogram_test test/histogram_perf
