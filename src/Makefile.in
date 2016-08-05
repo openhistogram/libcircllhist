@@ -65,7 +65,7 @@ LIBCIRCLLHIST_V=libcircllhist@DOTSO@.$(LIBCIRCLLHIST_VERSION)@DOTDYLIB@
 LIBCIRCLLHIST=libcircllhist@DOTSO@@DOTDYLIB@
 LUA_FFI=lua/ffi_libcircllhist.lua
 
-TARGETS=$(LIBCIRCLLHIST) $(LUA_FFI) test/histogram_test
+TARGETS=$(LIBCIRCLLHIST) $(LUA_FFI) test/histogram_test test/histogram_perf
 
 all:	reversion $(TARGETS)
 
@@ -89,7 +89,10 @@ $(LIBCIRCLLHIST_V):	$(LIBCIRCLLHIST_OBJS)
 	$(SHLD) $(SHLDFLAGS) $(CFLAGS) -o $@ $(LIBCIRCLLHIST_OBJS) -lmtev
 
 test/histogram_test: test/histogram_test.c $(LIBCIRCLLHIST)
-	$(Q)$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -I. -o $@ test/histogram_test.c -lm -luuid -lmtev -L. -L.. -lcircllhist
+	$(Q)$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -I. -o $@ test/histogram_test.c -lm -lmtev -L. -L.. -lcircllhist
+
+test/histogram_perf: test/histogram_perf.c $(LIBCIRCLLHIST)
+	$(Q)$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -I. -o $@ test/histogram_perf.c -lm -lmtev -L. -L.. -lcircllhist
 
 $(LUA_FFI): 
 	./generateLuaFiles.sh . $@
@@ -117,13 +120,14 @@ install-libs:    $(LIBCIRCLLHIST) $(LUA_FFI)
 
 install:	install-headers install-libs
 
-tests: test/histogram_test $(LUA_FFI)
+tests: test/histogram_test test/histogram_perf $(LUA_FFI)
 	test/runTest.sh
 
 clean:
 	rm -f *.lo *.o $(TARGETS)
 	rm -f $(LIBCIRCLLHIST)
 	rm -f histogram_test
+	rm -f histogram_perl
 	rm -f $(LUA_FFI)
 
 Makefile.dep:

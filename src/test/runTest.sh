@@ -2,6 +2,7 @@
 
 pushd `dirname $0`
 export LD_LIBRARY_PATH=/opt/circonus/lib/amd64:/opt/circonus/lib
+export DYLD_LIBRARY_PATH=/opt/circonus/lib/amd64:/opt/circonus/lib:..
 
 # force our known luajit to the front of the queue
 export PATH=/opt/circonus/bin:$PATH

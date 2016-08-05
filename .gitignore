@@ -4,7 +4,9 @@
 *.lo
 *.o
 *.so
+*.dylib
 *.xmlh
+*.dSYM
 autom4te.cache
 configure
 .configure.*
@@ -21,4 +23,5 @@ src/circllhist_config.h
 src/circllhist_version.h
 src/libcircllhist.so*
 src/test/histogram_test
+src/test/histogram_perf
 src/lua/ffi_libcircllhist.lua
