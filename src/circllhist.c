@@ -28,21 +28,21 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <mtev_defines.h>
-
-#include <mtev_log.h>
-#include <mtev_b64.h>
 #include <assert.h>
 
+#include <stdlib.h>
 #include <errno.h>
+#include <sys/types.h>
+#include <string.h>
 #include <sys/socket.h>
 #include <math.h>
 #include <arpa/inet.h>
+#include <ctype.h>
 
 #include "circllhist.h"
 
 static union {
-   u_int64_t private_nan_internal_rep;
+   uint64_t  private_nan_internal_rep;
    double    private_nan_double_rep;
 } private_nan_union = { .private_nan_internal_rep = 0x7fffffffffffffff };
 
@@ -78,16 +78,23 @@ static double power_of_ten[256] = {
   1e-05, 0.0001, 0.001, 0.01, 0.1
 };
 
+static const char __b64[] = {
+  'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
+  'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+  'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
+  'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+  '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '+', '/', 0x00 };
+
 struct histogram {
-  u_int16_t allocd;
-  u_int16_t used;
+  uint16_t allocd;
+  uint16_t used;
   struct {
     hist_bucket_t bucket;
-    u_int64_t count;
+    uint64_t count;
   } *bvs;
 };
 
-u_int64_t bvl_limits[7] = {
+uint64_t bvl_limits[7] = {
   0x00000000000000ffULL, 0x0000000000000ffffULL,
   0x0000000000ffffffULL, 0x00000000fffffffffULL,
   0x000000ffffffffffULL, 0x0000fffffffffffffULL,
@@ -115,7 +122,7 @@ bv_size(const histogram_t *h, int idx) {
 static ssize_t
 bv_write(const histogram_t *h, int idx, void *buff, ssize_t size) {
   int i;
-  u_int8_t *cp;
+  uint8_t *cp;
   ssize_t needed;
   bvdatum_t tgt_type = BVL8;
   for(i=0; i<BVL8; i++)
@@ -135,12 +142,12 @@ bv_write(const histogram_t *h, int idx, void *buff, ssize_t size) {
 }
 static ssize_t
 bv_read(histogram_t *h, int idx, const void *buff, ssize_t len) {
-  const u_int8_t *cp;
-  u_int64_t count = 0;
+  const uint8_t *cp;
+  uint64_t count = 0;
   bvdatum_t tgt_type;
   int i;
 
-  mtevAssert(idx == h->used);
+  assert(idx == h->used);
   if(len < 3) return -1;
   cp = buff;
   tgt_type = cp[2];
@@ -150,7 +157,7 @@ bv_read(histogram_t *h, int idx, const void *buff, ssize_t len) {
   h->bvs[idx].bucket.exp = cp[1];
   h->used++;
   for(i=tgt_type;i>=0;i--)
-    count |= ((u_int64_t)cp[i+3]) << (i * 8);
+    count |= ((uint64_t)cp[i+3]) << (i * 8);
   h->bvs[idx].count = count;
   return 3 + tgt_type + 1;
 }
@@ -178,8 +185,8 @@ hist_serialize_b64_estimate(const histogram_t *h) {
 ssize_t
 hist_serialize(const histogram_t *h, void *buff, ssize_t len) {
   ssize_t written = 0;
-  u_int8_t *cp = buff;
-  u_int16_t nlen;
+  uint8_t *cp = buff;
+  uint16_t nlen;
   int i;
 
   if(len < 2) return -1;
@@ -195,22 +202,53 @@ hist_serialize(const histogram_t *h, void *buff, ssize_t len) {
   return written;
 }
 
-#ifndef SKIP_LIBMTEV
+static int
+copy_of_mtev_b64_encode(const unsigned char *src, size_t src_len,
+                        char *dest, size_t dest_len) {
+  const unsigned char *bptr = src;
+  char *eptr = dest;
+  int len = src_len;
+  int n = (((src_len + 2) / 3) * 4);
+
+  if(dest_len < n) return 0;
+
+  while(len > 2) {
+    *eptr++ = __b64[bptr[0] >> 2];
+    *eptr++ = __b64[((bptr[0] & 0x03) << 4) + (bptr[1] >> 4)];
+    *eptr++ = __b64[((bptr[1] & 0x0f) << 2) + (bptr[2] >> 6)];
+    *eptr++ = __b64[bptr[2] & 0x3f];
+    bptr += 3;
+    len -= 3;
+  }
+  if(len != 0) {
+    *eptr++ = __b64[bptr[0] >> 2];
+    if(len > 1) {
+      *eptr++ = __b64[((bptr[0] & 0x03) << 4) + (bptr[1] >> 4)];
+      *eptr++ = __b64[(bptr[1] & 0x0f) << 2];
+      *eptr = '=';
+    } else {
+      *eptr++ = __b64[(bptr[0] & 0x03) << 4];
+      *eptr++ = '=';
+      *eptr = '=';
+    }
+  }
+  return n;
+}
+
 ssize_t
 hist_serialize_b64(const histogram_t *h, char *b64_serialized_histo_buff, ssize_t buff_len) {
   ssize_t serialize_buff_length = hist_serialize_estimate(h);
   void *serialize_buff = alloca(serialize_buff_length);
   ssize_t serialized_length = hist_serialize(h, serialize_buff, serialize_buff_length);
 
-  return mtev_b64_encode(serialize_buff, serialized_length, b64_serialized_histo_buff, buff_len);
+  return copy_of_mtev_b64_encode(serialize_buff, serialized_length, b64_serialized_histo_buff, buff_len);
 }
-#endif
 
 ssize_t
 hist_deserialize(histogram_t *h, const void *buff, ssize_t len) {
-  const u_int8_t *cp = buff;
+  const uint8_t *cp = buff;
   ssize_t bytes_read = 0;
-  u_int16_t nlen, cnt;
+  uint16_t nlen, cnt;
   if(len < 2) goto bad_read;
   if(h->bvs) free(h->bvs);
   h->bvs = NULL;
@@ -241,11 +279,49 @@ hist_deserialize(histogram_t *h, const void *buff, ssize_t len) {
   return -1;
 }
 
+static int
+copy_of_mtev_b64_decode(const char *src, size_t src_len,
+                        unsigned char *dest, size_t dest_len) {
+  const unsigned char *cp = (unsigned char *)src;
+  unsigned char *dcp = dest;
+  unsigned char ch, in[4], out[3];
+  int ib = 0, ob = 3, needed = (((src_len / 4) * 3) - 2);
+
+  if(dest_len < needed) return 0;
+  while(cp <= ((unsigned char *)src+src_len)) {
+    if((*cp >= 'A') && (*cp <= 'Z')) ch = *cp - 'A';
+    else if((*cp >= 'a') && (*cp <= 'z')) ch = *cp - 'a' + 26;
+    else if((*cp >= '0') && (*cp <= '9')) ch = *cp - '0' + 52;
+    else if(*cp == '+') ch = 62;
+    else if(*cp == '/') ch = 63;
+    else if(*cp == '=') ch = 0xff;
+    else if(isspace((int)*cp)) { cp++; continue; }
+    else break;
+    cp++;
+    if(ch == 0xff) {
+      if(ib == 0) break;
+      if(ib == 1 || ib == 2) ob = 1;
+      else ob = 2;
+      ib = 3;
+    }
+    in[ib++] = ch;
+    if(ib == 4) {
+      out[0] = (in[0] << 2) | ((in[1] & 0x30) >> 4);
+      out[1] = ((in[1] & 0x0f) << 4) | ((in[2] & 0x3c) >> 2);
+      out[2] = ((in[2] & 0x03) << 6) | (in[3] & 0x3f);
+      for(ib = 0; ib < ob; ib++)
+        *dcp++ = out[ib];
+      ib = 0;
+    }
+  }
+  return dcp - (unsigned char *)dest;
+}
+
 ssize_t hist_deserialize_b64(histogram_t *h, const void *b64_string, ssize_t b64_string_len) {
     int decoded_hist_len;
     unsigned char* decoded_hist = alloca(b64_string_len);
 
-    decoded_hist_len = mtev_b64_decode(b64_string, b64_string_len, decoded_hist, b64_string_len);
+    decoded_hist_len = copy_of_mtev_b64_decode(b64_string, b64_string_len, decoded_hist, b64_string_len);
 
     if (decoded_hist_len < 2) {
       return -1;
@@ -281,9 +357,9 @@ int hist_bucket_cmp(hist_bucket_t h1, hist_bucket_t h2) {
 
 double
 hist_bucket_to_double(hist_bucket_t hb) {
-  u_int8_t *pidx;
-  mtevAssert(private_nan != 0);
-  pidx = (u_int8_t *)&hb.exp;
+  uint8_t *pidx;
+  assert(private_nan != 0);
+  pidx = (uint8_t *)&hb.exp;
   if(hb.val > 99 || hb.val < -99) return private_nan;
   if(hb.val < 10 && hb.val > -10) return 0.0;
   return (((double)hb.val)/10.0) * power_of_ten[*pidx];
@@ -293,8 +369,8 @@ double
 hist_bucket_to_double_bin_width(hist_bucket_t hb) {
   if(hb.val > 99 || hb.val < -99) return private_nan;
   if(hb.val < 10 && hb.val > -10) return 0.0;
-  u_int8_t *pidx;
-  pidx = (u_int8_t *)&hb.exp;
+  uint8_t *pidx;
+  pidx = (uint8_t *)&hb.exp;
   return power_of_ten[*pidx]/10.0;
 }
 
@@ -424,12 +500,12 @@ hist_bucket_t
 double_to_hist_bucket(double d) {
   double d_copy = d;
   hist_bucket_t hb = { (int8_t)0xff, 0 }; // NaN
-  mtevAssert(private_nan != 0);
+  assert(private_nan != 0);
   if(isnan(d) || isinf(d)) return hb;
   else if(d==0) hb.val = 0;
   else {
     int big_exp;
-    u_int8_t *pidx;
+    uint8_t *pidx;
     int sign = (d < 0) ? -1 : 1;
     d = fabs(d);
     big_exp = (int32_t)floor(log10(d));
@@ -446,7 +522,7 @@ double_to_hist_bucket(double d) {
       }
       return hb;
     }
-    pidx = (u_int8_t *)&hb.exp;
+    pidx = (uint8_t *)&hb.exp;
     d /= power_of_ten[*pidx];
     d *= 10;
     // avoid rounding problem at the bucket boundary
@@ -469,10 +545,8 @@ double_to_hist_bucket(double d) {
     }
     if(!((hb.val >= 10 && hb.val < 100) ||
          (hb.val <= -10 && hb.val > -100))) {
-      u_int64_t double_pun = 0;
+      uint64_t double_pun = 0;
       memcpy(&double_pun, &d_copy, sizeof(d_copy));
-      mtevL(mtev_error, "double_to_hist_bucket(%f / %llx) -> %u.%u\n",
-            d_copy, (unsigned long long)double_pun, hb.val, hb.exp);
       hb.val = (int8_t)0xff;
       hb.exp = 0;
     }
@@ -503,12 +577,12 @@ hist_internal_find(histogram_t *hist, hist_bucket_t hb, int *idx) {
   if(rv == 0) return 1;   /* this is it */
   if(rv < 0) return 0;    /* it goes here (before) */
   (*idx)++;               /* it goes after here */
-  mtevAssert(*idx >= 0 && *idx <= hist->used);
+  assert(*idx >= 0 && *idx <= hist->used);
   return 0;
 }
 
-u_int64_t
-hist_insert_raw(histogram_t *hist, hist_bucket_t hb, u_int64_t count) {
+uint64_t
+hist_insert_raw(histogram_t *hist, hist_bucket_t hb, uint64_t count) {
   int found, idx;
   if(count == 0) return 0;
   if(hist->bvs == NULL) {
@@ -544,28 +618,28 @@ hist_insert_raw(histogram_t *hist, hist_bucket_t hb, u_int64_t count) {
   }
   else {
     /* Just need to update the counters */
-    u_int64_t newval = hist->bvs[idx].count + count;
+    uint64_t newval = hist->bvs[idx].count + count;
     if(newval < hist->bvs[idx].count) /* we rolled */
-      newval = ~(u_int64_t)0;
+      newval = ~(uint64_t)0;
     count = newval - hist->bvs[idx].count;
     hist->bvs[idx].count = newval;
   }
   return count;
 }
 
-u_int64_t
-hist_insert(histogram_t *hist, double val, u_int64_t count) {
+uint64_t
+hist_insert(histogram_t *hist, double val, uint64_t count) {
   if(count == 0) return 0;
   return hist_insert_raw(hist, double_to_hist_bucket(val), count);
 }
 
-u_int64_t
-hist_remove(histogram_t *hist, double val, u_int64_t count) {
+uint64_t
+hist_remove(histogram_t *hist, double val, uint64_t count) {
   hist_bucket_t hb;
   int idx;
   hb = double_to_hist_bucket(val);
   if(hist_internal_find(hist, hb, &idx)) {
-    u_int64_t newval = hist->bvs[idx].count - count;
+    uint64_t newval = hist->bvs[idx].count - count;
     if(newval > hist->bvs[idx].count) newval = 0; /* we rolled */
     count = hist->bvs[idx].count - newval;
     hist->bvs[idx].count = newval;
@@ -581,7 +655,7 @@ hist_bucket_count(const histogram_t *hist) {
 
 int
 hist_bucket_idx(const histogram_t *hist, int idx,
-                double *bucket, u_int64_t *count) {
+                double *bucket, uint64_t *count) {
   if(idx < 0 || idx >= hist->used) return 0;
   *bucket = hist_bucket_to_double(hist->bvs[idx].bucket);
   *count = hist->bvs[idx].count;
@@ -590,7 +664,7 @@ hist_bucket_idx(const histogram_t *hist, int idx,
 
 int
 hist_bucket_idx_bucket(const histogram_t *hist, int idx,
-                       hist_bucket_t *bucket, u_int64_t *count) {
+                       hist_bucket_t *bucket, uint64_t *count) {
   if(idx < 0 || idx >= hist->used) return 0;
   *bucket = hist->bvs[idx].bucket;
   *count = hist->bvs[idx].count;
@@ -635,16 +709,16 @@ hist_needed_merge_size_fc(histogram_t **hist, int cnt,
 static void
 internal_bucket_accum(histogram_t *tgt, int tgtidx,
                       histogram_t *src, int srcidx) {
-  u_int64_t newval;
-  mtevAssert(tgtidx < tgt->allocd);
+  uint64_t newval;
+  assert(tgtidx < tgt->allocd);
   if(tgt->used == tgtidx) {
     tgt->bvs[tgtidx].bucket = src->bvs[srcidx].bucket;
     tgt->used++;
   }
-  mtevAssert(hist_bucket_cmp(tgt->bvs[tgtidx].bucket,
+  assert(hist_bucket_cmp(tgt->bvs[tgtidx].bucket,
                          src->bvs[srcidx].bucket) == 0);
   newval = tgt->bvs[tgtidx].count + src->bvs[srcidx].count;
-  if(newval < tgt->bvs[tgtidx].count) newval = ~(u_int64_t)0;
+  if(newval < tgt->bvs[tgtidx].count) newval = ~(uint64_t)0;
   tgt->bvs[tgtidx].count = newval;
 }
 

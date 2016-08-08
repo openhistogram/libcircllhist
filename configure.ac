@@ -135,51 +135,6 @@ AC_CHECK_SIZEOF(long int, 4)
 AC_CHECK_SIZEOF(long long int, 8)
 AC_CHECK_SIZEOF(void *, 1)
 
-AC_CHECK_HEADER(mtev_config.h, [], [AC_MSG_ERROR(*** libmtev (headers) required ***)])
-AC_CHECK_LIB(mtev, mtev_main, , [AC_MSG_ERROR(*** libmtev is required ***)])
-AC_CHECK_LIB(umem, umem_cache_create, , )
-AC_CHECK_LIB(z, compress2, , [AC_MSG_ERROR([*** zlib is required ***])])
-AC_CHECK_LIB(rt, sem_init, , [
-  AC_CHECK_LIB(rt, clock_gettime, , )
-])
-AC_CHECK_LIB(posix4, sem_wait, , )
-
-LIBMTEV_LIBS=$LIBS
-AC_SUBST(LIBMTEV_LIBS)
-
-AC_CACHE_CHECK([for htobe64], ac_cv_have_htobe64, [
-	AC_TRY_LINK(
-		[ #include <endian.h> ],
-		[ long long int a; a = htobe64(1);],
-		[ ac_cv_have_htobe64="yes" ],
-		[ ac_cv_have_htobe64="no" ]
-	)
-])
-AC_CACHE_CHECK([for htobe64], ac_cv_have_be64toh, [
-  AC_TRY_LINK(
-    [ #include <endian.h> ],
-    [ long long int a; a = be64toh(1);],
-    [ ac_cv_have_be64toh="yes" ],
-    [ ac_cv_have_be64toh="no" ]
-  )
-])
-AC_CACHE_CHECK([for htonll], ac_cv_have_htonll, [
-	AC_TRY_LINK(
-		[ #include <endian.h> ],
-		[ long long int a; a = htonll(1);],
-		[ ac_cv_have_htonll="yes" ],
-		[ ac_cv_have_htonll="no" ]
-	)
-])
-
-if test "x$ac_cv_have_htonll" = "xno" -a "x$ac_cv_have_htobe64" = "xyes" ; then
-	AC_DEFINE(MAKE_HTOBE64_HTONLL)
-fi
-if test "x$ac_cv_have_htonll" = "xno" -a "x$ac_cv_have_be64toh" = "xyes" ; then
-  AC_DEFINE(MAKE_BE64TOH_NTOHLL)
-fi
-
-
 AC_CACHE_CHECK([for u_int type], ac_cv_have_u_int, [
 	AC_TRY_COMPILE(
 		[ #include <sys/types.h> ], 
@@ -310,8 +265,6 @@ AC_CACHE_CHECK([for ssize_t], ac_cv_have_ssize_t, [
 if test "x$ac_cv_have_ssize_t" = "xyes" ; then
 	AC_DEFINE(HAVE_SSIZE_T)
 fi
-
-AC_SUBST(BUILD_MODULES)
 
 SHCFLAGS="$PICFLAGS $CFLAGS"
 AC_SUBST(SHCFLAGS)

@@ -4,7 +4,6 @@
 #include <circllhist.h>
 #include <sys/time.h>
 #include <assert.h>
-#include <mtev_defines.h>
 
 histogram_t *build(histogram_t *out, double *vals, int nvals) {
   int i;
@@ -43,7 +42,8 @@ int main() {
         cnt += size;
       }
       gettimeofday(&finish, NULL);
-      double elapsed = sub_timeval_d(finish, start);
+      double elapsed = finish.tv_sec - start.tv_sec;
+      elapsed += (finish.tv_usec/1000000.0) - (start.tv_usec/1000000.0);
       printf("ops: %ld, time: %gs, time-per-op: %0.2fns\n",
              cnt, elapsed, (elapsed / (double)cnt) * 1000000000.0);
       hist_free(hist);
