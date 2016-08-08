@@ -33,7 +33,7 @@
 
 #define DEFAULT_HIST_SIZE 100
 #define API_EXPORT(type) extern type
-#include <mtev_config.h>
+#include <stdint.h>
 
 typedef struct histogram histogram_t;
 
@@ -64,12 +64,12 @@ API_EXPORT(int) hist_approx_quantile(const histogram_t *, double *q_in, int nq, 
 
 API_EXPORT(histogram_t) *hist_alloc();
 API_EXPORT(void) hist_free(histogram_t *hist);
-API_EXPORT(u_int64_t) hist_insert(histogram_t *hist, double val, u_int64_t count);
-API_EXPORT(u_int64_t) hist_insert_raw(histogram_t *hist, hist_bucket_t hb, u_int64_t count);
-API_EXPORT(u_int64_t) hist_remove(histogram_t *hist, double val, u_int64_t count);
+API_EXPORT(uint64_t) hist_insert(histogram_t *hist, double val, uint64_t count);
+API_EXPORT(uint64_t) hist_insert_raw(histogram_t *hist, hist_bucket_t hb, uint64_t count);
+API_EXPORT(uint64_t) hist_remove(histogram_t *hist, double val, uint64_t count);
 API_EXPORT(int) hist_bucket_count(const histogram_t *hist);
-API_EXPORT(int) hist_bucket_idx(const histogram_t *hist, int idx, double *v, u_int64_t *c);
-API_EXPORT(int) hist_bucket_idx_bucket(const histogram_t *hist, int idx, hist_bucket_t *b, u_int64_t *c);
+API_EXPORT(int) hist_bucket_idx(const histogram_t *hist, int idx, double *v, uint64_t *c);
+API_EXPORT(int) hist_bucket_idx_bucket(const histogram_t *hist, int idx, hist_bucket_t *b, uint64_t *c);
 API_EXPORT(int) hist_accumulate(histogram_t *tgt, const histogram_t * const *src, int cnt);
 API_EXPORT(int) hist_num_buckets(const histogram_t *hist);
 API_EXPORT(void) hist_clear(histogram_t *hist);

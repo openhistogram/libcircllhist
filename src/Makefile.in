@@ -93,13 +93,13 @@ $(LIBCIRCLLHIST):	$(LIBCIRCLLHIST_V)
 
 $(LIBCIRCLLHIST_V):	$(LIBCIRCLLHIST_OBJS)
 	@echo "- linking $@"
-	$(SHLD) $(SHLDFLAGS) $(CFLAGS) -o $@ $(LIBCIRCLLHIST_OBJS) -lmtev
+	$(SHLD) $(SHLDFLAGS) $(CFLAGS) -o $@ $(LIBCIRCLLHIST_OBJS) -lm
 
 test/histogram_test: test/histogram_test.c $(LIBCIRCLLHIST)
-	$(Q)$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -I. -o $@ test/histogram_test.c -lm -lmtev -L. -L.. -lcircllhist
+	$(Q)$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -I. -o $@ test/histogram_test.c -L. -L.. -lcircllhist
 
 test/histogram_perf: test/histogram_perf.c $(LIBCIRCLLHIST)
-	$(Q)$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -I. -o $@ test/histogram_perf.c -lm -lmtev -L. -L.. -lcircllhist
+	$(Q)$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -I. -o $@ test/histogram_perf.c -L. -L.. -lcircllhist
 
 $(LUA_FFI): 
 	./generateLuaFiles.sh . $@
