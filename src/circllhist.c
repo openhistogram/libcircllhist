@@ -31,6 +31,7 @@
 #include <assert.h>
 
 #include <stdlib.h>
+#include <alloca.h>
 #include <errno.h>
 #include <sys/types.h>
 #include <string.h>
