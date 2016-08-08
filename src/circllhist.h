@@ -33,6 +33,8 @@
 
 #define DEFAULT_HIST_SIZE 100
 #define API_EXPORT(type) extern type
+#include <stdlib.h>
+#include <sys/types.h>
 #include <stdint.h>
 
 typedef struct histogram histogram_t;
