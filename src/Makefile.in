@@ -65,6 +65,7 @@ WHOLE_ARCHIVE=@WHOLE_ARCHIVE@
 NOWHOLE_ARCHIVE=@NOWHOLE_ARCHIVE@
 LIBCIRCLLHIST_V=libcircllhist@DOTSO@.$(LIBCIRCLLHIST_VERSION)@DOTDYLIB@
 LIBCIRCLLHIST=libcircllhist@DOTSO@@DOTDYLIB@
+LIBCIRCLLHISTA=libcircllhist.a
 
 ifeq ($(OS),Darwin)
 SHLDFLAGS+=-current_version $(LIBCIRCLLHIST_VERSION) -install_name $(libdir)/$(LIBCIRCLLHIST_V)
@@ -72,7 +73,7 @@ endif
 
 LUA_FFI=lua/ffi_libcircllhist.lua
 
-TARGETS=$(LIBCIRCLLHIST) $(LUA_FFI) test/histogram_test test/histogram_perf
+TARGETS=$(LIBCIRCLLHISTA) $(LIBCIRCLLHIST) $(LUA_FFI) test/histogram_test test/histogram_perf
 
 all:	reversion $(TARGETS)
 
@@ -88,6 +89,10 @@ reversion:
 circllhist_version.h:
 	@$(top_srcdir)/buildtools/mkversion.sh circllhist_version.h
 
+$(LIBCIRCLLHISTA):	$(LIBCIRCLLHIST_OBJS)
+	@rm -f $(LIBCIRCLLHISTA)
+	$(Q)$(AR) cq $(LIBCIRCLLHISTA) $(LIBCIRCLLHIST_OBJS)
+
 $(LIBCIRCLLHIST):	$(LIBCIRCLLHIST_V)
 	ln -sf $(LIBCIRCLLHIST_V) $(LIBCIRCLLHIST)
 
@@ -96,10 +101,10 @@ $(LIBCIRCLLHIST_V):	$(LIBCIRCLLHIST_OBJS)
 	$(SHLD) $(SHLDFLAGS) $(CFLAGS) -o $@ $(LIBCIRCLLHIST_OBJS) -lm
 
 test/histogram_test: test/histogram_test.c $(LIBCIRCLLHIST)
-	$(Q)$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -I. -o $@ test/histogram_test.c -L. -L.. -lcircllhist
+	$(Q)$(CC) -I. $(CPPFLAGS) $(CFLAGS) -L. $(LDFLAGS) -I. -o $@ test/histogram_test.c -lcircllhist
 
 test/histogram_perf: test/histogram_perf.c $(LIBCIRCLLHIST)
-	$(Q)$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -I. -o $@ test/histogram_perf.c -L. -L.. -lcircllhist -lm
+	$(Q)$(CC) -I. $(CPPFLAGS) $(CFLAGS) -L. $(LDFLAGS) -I. -o $@ test/histogram_perf.c -lcircllhist -lm
 
 $(LUA_FFI): 
 	./generateLuaFiles.sh . $@
@@ -122,6 +127,7 @@ install-libs:    $(LIBCIRCLLHIST) $(LUA_FFI)
 	$(top_srcdir)/buildtools/mkinstalldirs $(DESTDIR)$(libdir)
 	$(top_srcdir)/buildtools/mkinstalldirs $(DESTDIR)$(datadir)/lua/5.1
 	$(INSTALL) -m 0755 $(LIBCIRCLLHIST_V) $(DESTDIR)$(libdir)/$(LIBCIRCLLHIST_V)
+	$(INSTALL) -m 0755 $(LIBCIRCLLHISTA) $(DESTDIR)$(libdir)/$(LIBCIRCLLHISTA)
 	ln -sf $(LIBCIRCLLHIST_V) $(DESTDIR)$(libdir)/$(LIBCIRCLLHIST)
 	$(INSTALL) -m 0755 $(LUA_FFI) $(DESTDIR)$(datadir)/lua/5.1/
 
