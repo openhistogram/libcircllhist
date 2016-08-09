@@ -83,6 +83,7 @@ int main() {
         hist = buildI(hist, vals, size);
         cnt += size;
       }
+      assert(hist_num_buckets(hist) == size);
       gettimeofday(&finish, NULL);
       double elapsed = finish.tv_sec - start.tv_sec;
       elapsed += (finish.tv_usec/1000000.0) - (start.tv_usec/1000000.0);
