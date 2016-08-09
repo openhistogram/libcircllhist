@@ -30,6 +30,7 @@
 
 #include <assert.h>
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <alloca.h>
 #include <errno.h>
@@ -498,6 +499,31 @@ hist_approx_quantile(const histogram_t *hist, double *q_in, int nq, double *q_ou
 }
 
 hist_bucket_t
+int_scale_to_hist_bucket(int64_t value, int scale) {
+  static hist_bucket_t hbnan = { (int8_t)0xff, 0 };
+  hist_bucket_t hb = { 0, 0 };
+  int sign = 1;
+  if(value == 0) return hb;
+  scale++;
+  if(value < 0) {
+    value = 0 - value;
+    sign = -1;
+  }
+  if(value < 10) {
+    value *= 10;
+    scale -= 1;
+  }
+  while(value > 100) {
+    value /= 10;
+    scale++;
+  }
+  if(scale < -128) return hb;
+  if(scale > 127) return hbnan;
+  hb.val = sign * value;
+  hb.exp = scale;
+  return hb;
+}
+hist_bucket_t
 double_to_hist_bucket(double d) {
   double d_copy = d;
   hist_bucket_t hb = { (int8_t)0xff, 0 }; // NaN
@@ -632,6 +658,12 @@ uint64_t
 hist_insert(histogram_t *hist, double val, uint64_t count) {
   if(count == 0) return 0;
   return hist_insert_raw(hist, double_to_hist_bucket(val), count);
+}
+
+uint64_t
+hist_insert_intscale(histogram_t *hist, int64_t val, int scale, uint64_t count) {
+  if(count == 0) return 0;
+  return hist_insert_raw(hist, int_scale_to_hist_bucket(val, scale), count);
 }
 
 uint64_t
