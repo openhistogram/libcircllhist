@@ -59,6 +59,7 @@ typedef struct hist_bucket {
 API_EXPORT(double) hist_bucket_to_double(hist_bucket_t hb);
 API_EXPORT(double) hist_bucket_to_double_bin_width(hist_bucket_t hb);
 API_EXPORT(hist_bucket_t) double_to_hist_bucket(double d);
+API_EXPORT(hist_bucket_t) int_scale_to_hist_bucket(int64_t value, int scale);
 API_EXPORT(double) hist_bucket_midpoint(hist_bucket_t in);
 API_EXPORT(double) hist_approx_mean(const histogram_t *);
 API_EXPORT(double) hist_approx_sum(const histogram_t *);
@@ -67,6 +68,7 @@ API_EXPORT(int) hist_approx_quantile(const histogram_t *, double *q_in, int nq, 
 API_EXPORT(histogram_t) *hist_alloc();
 API_EXPORT(void) hist_free(histogram_t *hist);
 API_EXPORT(uint64_t) hist_insert(histogram_t *hist, double val, uint64_t count);
+API_EXPORT(uint64_t) hist_insert_intscale(histogram_t *hist, int64_t val, int scale, uint64_t count);
 API_EXPORT(uint64_t) hist_insert_raw(histogram_t *hist, hist_bucket_t hb, uint64_t count);
 API_EXPORT(uint64_t) hist_remove(histogram_t *hist, double val, uint64_t count);
 API_EXPORT(int) hist_bucket_count(const histogram_t *hist);

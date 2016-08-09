@@ -39,7 +39,26 @@ bool double_equals(double a, double b) {
   return false;
 }
 void bucket_tests() {
-  hist_bucket_t b;
+  hist_bucket_t b, o;
+
+  b = int_scale_to_hist_bucket(0,0);
+  T(is(b.val == 0 && b.exp == 0));
+
+  b = int_scale_to_hist_bucket(1,-9);
+  o = double_to_hist_bucket(1e-9);
+  T(is(b.val == o.val && b.exp == o.exp));
+
+  b = int_scale_to_hist_bucket(1300000000,-9);
+  o = double_to_hist_bucket(1.3);
+  T(is(b.val == o.val && b.exp == o.exp));
+
+  b = int_scale_to_hist_bucket(-2700,-9);
+  o = double_to_hist_bucket(-2.7e-6);
+  T(is(b.val == o.val && b.exp == o.exp));
+
+  b = int_scale_to_hist_bucket(7,-9);
+  o = double_to_hist_bucket(7e-9);
+  T(is(b.val == o.val && b.exp == o.exp));
 
   b = double_to_hist_bucket(0);
   T(is(b.val == 0 && b.exp == 0));
