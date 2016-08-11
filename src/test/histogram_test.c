@@ -44,6 +44,10 @@ void bucket_tests() {
   b = int_scale_to_hist_bucket(0,0);
   T(is(b.val == 0 && b.exp == 0));
 
+  b = int_scale_to_hist_bucket(2,0);
+  o = double_to_hist_bucket(2);
+  T(is(b.val == o.val && b.exp == o.exp));
+
   b = int_scale_to_hist_bucket(1,-9);
   o = double_to_hist_bucket(1e-9);
   T(is(b.val == o.val && b.exp == o.exp));
