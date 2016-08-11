@@ -14,8 +14,9 @@ if [ -x /usr/bin/gsed ]; then
 else
     SED=sed
 fi
+AWK=awk
 
-cdef_content=`cat $src_dir/circllhist.h | egrep -v "#if|#endif|#define|#include" | $SED 's/u_int/uint/g' | $SED 's/API_EXPORT(\([a-z0-9_]*\))/\1/g' | $SED '/typedef struct histogram histogram_t;/ i\typedef long int ssize_t;\n'`
+cdef_content=`cat $src_dir/circllhist.h | egrep -v "#if|#endif|#define|#include" | $SED 's/u_int/uint/g' | $SED 's/API_EXPORT(\([^\)]*\))/\1/g' | $AWK '/typedef struct histogram histogram_t;/ {print "typedef long int ssize_t;"} /./{print}'`
 
 D=`dirname $dst_file`
 if [ ! -e $D ]; then
