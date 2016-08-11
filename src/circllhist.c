@@ -48,6 +48,7 @@ static union {
    double    private_nan_double_rep;
 } private_nan_union = { .private_nan_internal_rep = 0x7fffffffffffffff };
 
+#define MAX_HIST_BINS (2 + 2 * 90 * 256)
 #define private_nan private_nan_union.private_nan_double_rep
 
 static double power_of_ten[256] = {
@@ -790,7 +791,18 @@ hist_clear(histogram_t *hist) {
 
 histogram_t *
 hist_alloc() {
-  return calloc(1, sizeof(histogram_t));
+  return hist_alloc_nbins(0);
+}
+
+histogram_t *
+hist_alloc_nbins(int nbins) {
+  histogram_t *tgt;
+  if(nbins < 1) nbins = DEFAULT_HIST_SIZE;
+  if(nbins > MAX_HIST_BINS) nbins = MAX_HIST_BINS;
+  tgt = calloc(1, sizeof(histogram_t));
+  tgt->allocd = nbins;
+  tgt->bvs = calloc(tgt->allocd, sizeof(*tgt->bvs));
+  return tgt;
 }
 
 void

@@ -66,6 +66,7 @@ API_EXPORT(double) hist_approx_sum(const histogram_t *);
 API_EXPORT(int) hist_approx_quantile(const histogram_t *, double *q_in, int nq, double *q_out);
 
 API_EXPORT(histogram_t) *hist_alloc();
+API_EXPORT(histogram_t *) hist_alloc_nbins(int nbins);
 API_EXPORT(void) hist_free(histogram_t *hist);
 API_EXPORT(uint64_t) hist_insert(histogram_t *hist, double val, uint64_t count);
 API_EXPORT(uint64_t) hist_insert_intscale(histogram_t *hist, int64_t val, int scale, uint64_t count);
