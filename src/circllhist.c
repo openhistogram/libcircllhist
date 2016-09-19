@@ -94,7 +94,7 @@ struct histogram {
   struct {
     hist_bucket_t bucket;
     uint64_t count;
-  } *bvs;
+  } __attribute__((packed)) *bvs;
 };
 
 uint64_t bvl_limits[7] = {
@@ -340,7 +340,7 @@ ssize_t hist_deserialize_b64(histogram_t *h, const void *b64_string, ssize_t b64
 static inline
 int hist_bucket_cmp(hist_bucket_t h1, hist_bucket_t h2) {
   // checks if h1 < h2 on the real axis.
-  if(h1.val == h2.val && h1.exp == h2.exp) return 0;
+  if(*(uint16_t *)&h1 == *(uint16_t *)&h2) return 0;
   /* place NaNs at the beginning always */
   if(h1.val == (int8_t)0xff) return 1;
   if(h2.val == (int8_t)0xff) return -1;
