@@ -5,9 +5,13 @@
 #include <sys/time.h>
 #include <assert.h>
 
+typedef histogram_t *(*halloc_func)();
+
+halloc_func halloc = NULL;
+
 histogram_t *build(histogram_t *out, double *vals, int nvals) {
   int i;
-  if(out == NULL) out = hist_alloc();
+  if(out == NULL) out = halloc();
   for(i=0;i<nvals;i++)
     hist_insert(out, vals[i], 1);
   return out;
@@ -27,7 +31,7 @@ struct sval {
 };
 histogram_t *buildI(histogram_t *out, struct sval *vals, int nvals) {
   int i;
-  if(out == NULL) out = hist_alloc();
+  if(out == NULL) out = halloc();
   for(i=0;i<nvals;i++)
     hist_insert_raw(out, int_scale_to_hist_bucket(vals[i].val, vals[i].scale), 1);
   return out;
@@ -42,7 +46,7 @@ struct sval *buildNIvals(int n) {
   return vals;
 }
 
-const int iters[] = { 10, 10000, 1000000 };
+const int iters[] = { 100, 10000, 1000000 };
 const int sizes[] = { 31, 127, 255 };
 int main() {
   int i, s;
@@ -50,15 +54,20 @@ int main() {
     for(s=0;s<sizeof(sizes)/sizeof(*sizes);s++) {
       struct timeval start, finish;
       histogram_t *hist = NULL;
-      int idx;
+      int idx, ai;
       int iter = iters[i];
       int size = sizes[s];
       long cnt = 0;
+      for(ai=0;ai<2;ai++) {
+        halloc = (ai%2 == 0) ? hist_alloc: hist_fast_alloc;
 
 { // double
-      printf("Running %d double iters over %d values in %d bins...\n",
+      hist = NULL;
+      printf("[%s] Running %d double iters over %d values in %d bins...\n",
+             (ai%2 == 0) ? "normal" : "fast",
              iter, (size*iter), size);
       double *vals = buildNvals(size);
+      hist = build(hist, vals, size);
       gettimeofday(&start, NULL);
       for(idx=0; idx<iter; idx++) {
         hist = build(hist, vals, size);
@@ -75,9 +84,11 @@ int main() {
 }
 { // int
       hist = NULL;
-      printf("Running %d int iters over %d values in %d bins...\n",
+      printf("[%s] Running %d int iters over %d values in %d bins...\n",
+             (ai%2 == 0) ? "normal" : "fast",
              iter, (size*iter), size);
       struct sval *vals = buildNIvals(size);
+      hist = buildI(hist, vals, size);
       gettimeofday(&start, NULL);
       for(idx=0; idx<iter; idx++) {
         hist = buildI(hist, vals, size);
@@ -92,7 +103,7 @@ int main() {
       hist_free(hist);
       free(vals);
 }
-
+      }
     }
   }
 }

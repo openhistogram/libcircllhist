@@ -88,15 +88,23 @@ static const char __b64[] = {
   'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
   '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '+', '/', 0x00 };
 
+struct hist_flevel {
+  uint8_t l2;
+  uint8_t l1;
+};
 struct histogram {
   uint16_t allocd;
   uint16_t used;
+  uint32_t fast:1;
   struct {
     hist_bucket_t bucket;
     uint64_t count;
   } __attribute__((packed)) *bvs;
 };
-
+struct histogram_fast {
+  struct histogram internal;
+  uint16_t *faster[256];
+};
 uint64_t bvl_limits[7] = {
   0x00000000000000ffULL, 0x0000000000000ffffULL,
   0x0000000000ffffffULL, 0x00000000fffffffffULL,
@@ -592,6 +600,17 @@ hist_internal_find(histogram_t *hist, hist_bucket_t hb, int *idx) {
   int rv = -1, l = 0, r = hist->used - 1;
   *idx = 0;
   if(hist->used == 0) return 0;
+  if(hist->fast) {
+    struct histogram_fast *hfast = (struct histogram_fast *)hist;
+    struct hist_flevel *faster = (struct hist_flevel *)&hb;
+    if(hfast->faster[faster->l1]) {
+      *idx = hfast->faster[faster->l1][faster->l2];
+      if(*idx) {
+        (*idx)--;
+        return 1;
+      }
+    }
+  }
   while(l < r) {
     int check = (r+l)/2;
     rv = hist_bucket_cmp(hist->bvs[check].bucket, hb);
@@ -619,6 +638,7 @@ hist_insert_raw(histogram_t *hist, hist_bucket_t hb, uint64_t count) {
   }
   found = hist_internal_find(hist, hb, &idx);
   if(!found) {
+    int i;
     if(hist->used == hist->allocd) {
       /* A resize is required */
       histogram_t dummy;
@@ -643,6 +663,16 @@ hist_insert_raw(histogram_t *hist, hist_bucket_t hb, uint64_t count) {
       hist->bvs[idx].count = count;
     }
     hist->used++;
+    if(hist->fast) {
+      struct histogram_fast *hfast = (struct histogram_fast *)hist;
+      /* reindex if in fast mode */
+      for(i=idx;i<hist->used;i++) {
+        struct hist_flevel *faster = (struct hist_flevel *)&hist->bvs[i].bucket;
+        if(hfast->faster[faster->l1] == NULL)
+          hfast->faster[faster->l1] = calloc(256, sizeof(uint16_t));
+        hfast->faster[faster->l1][faster->l2] = i+1;
+      }
+    }
   }
   else {
     /* Just need to update the counters */
@@ -786,7 +816,17 @@ hist_num_buckets(const histogram_t *hist) {
 
 void
 hist_clear(histogram_t *hist) {
-  hist->used = 0;
+  int i;
+  for(i=0;i<hist->used;i++)
+    hist->bvs[i].count = 0;
+  if(hist->fast) {
+    struct histogram_fast *hfast = (struct histogram_fast *)hist;
+    for(i=0;i<256;i++) {
+      if(hfast->faster[i]) {
+        memset(hfast->faster[i], 0, 256 * sizeof(uint16_t));
+      }
+    }
+  }
 }
 
 histogram_t *
@@ -805,9 +845,31 @@ hist_alloc_nbins(int nbins) {
   return tgt;
 }
 
+histogram_t *
+hist_fast_alloc() {
+  return hist_fast_alloc_nbins(0);
+}
+
+histogram_t *
+hist_fast_alloc_nbins(int nbins) {
+  histogram_t *tgt;
+  if(nbins < 1) nbins = DEFAULT_HIST_SIZE;
+  if(nbins > MAX_HIST_BINS) nbins = MAX_HIST_BINS;
+  tgt = calloc(1, sizeof(struct histogram_fast));
+  tgt->allocd = nbins;
+  tgt->bvs = calloc(tgt->allocd, sizeof(*tgt->bvs));
+  tgt->fast = 1;
+  return tgt;
+}
+
 void
 hist_free(histogram_t *hist) {
   if(hist == NULL) return;
   if(hist->bvs != NULL) free(hist->bvs);
+  if(hist->fast) {
+    int i;
+    struct histogram_fast *hfast = (struct histogram_fast *)hist;
+    for(i=0;i<256;i++) free(hfast->faster[i]);
+  }
   free(hist);
 }

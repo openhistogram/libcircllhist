@@ -135,7 +135,7 @@ void test1(double val, double b, double w) {
 
 histogram_t *build(double *vals, int nvals) {
   int i;
-  histogram_t *out = hist_alloc();
+  histogram_t *out = hist_fast_alloc();
   for(i=0;i<nvals;i++)
     hist_insert(out, vals[i], 1);
   return out;
