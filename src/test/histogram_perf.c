@@ -62,6 +62,7 @@ int main() {
         halloc = (ai%2 == 0) ? hist_alloc: hist_fast_alloc;
 
 { // double
+      cnt = 0;
       hist = NULL;
       printf("[%s] Running %d double iters over %d values in %d bins...\n",
              (ai%2 == 0) ? "normal" : "fast",
@@ -84,6 +85,7 @@ int main() {
 }
 { // int
       hist = NULL;
+      cnt = 0;
       printf("[%s] Running %d int iters over %d values in %d bins...\n",
              (ai%2 == 0) ? "normal" : "fast",
              iter, (size*iter), size);
