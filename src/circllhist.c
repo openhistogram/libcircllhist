@@ -631,7 +631,6 @@ hist_internal_find(histogram_t *hist, hist_bucket_t hb, int *idx) {
 uint64_t
 hist_insert_raw(histogram_t *hist, hist_bucket_t hb, uint64_t count) {
   int found, idx;
-  if(count == 0) return 0;
   if(hist->bvs == NULL) {
     hist->bvs = malloc(DEFAULT_HIST_SIZE * sizeof(*hist->bvs));
     hist->allocd = DEFAULT_HIST_SIZE;
@@ -687,13 +686,11 @@ hist_insert_raw(histogram_t *hist, hist_bucket_t hb, uint64_t count) {
 
 uint64_t
 hist_insert(histogram_t *hist, double val, uint64_t count) {
-  if(count == 0) return 0;
   return hist_insert_raw(hist, double_to_hist_bucket(val), count);
 }
 
 uint64_t
 hist_insert_intscale(histogram_t *hist, int64_t val, int scale, uint64_t count) {
-  if(count == 0) return 0;
   return hist_insert_raw(hist, int_scale_to_hist_bucket(val, scale), count);
 }
 
