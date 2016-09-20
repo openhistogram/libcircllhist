@@ -821,9 +821,11 @@ hist_clear(histogram_t *hist) {
     hist->bvs[i].count = 0;
   if(hist->fast) {
     struct histogram_fast *hfast = (struct histogram_fast *)hist;
-    for(i=0;i<256;i++)
-      if(hfast->faster[i])
+    for(i=0;i<256;i++) {
+      if(hfast->faster[i]) {
         memset(hfast->faster[i], 0, 256 * sizeof(uint16_t));
+      }
+    }
   }
 }
 
