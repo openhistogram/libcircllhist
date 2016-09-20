@@ -65,7 +65,7 @@ API_EXPORT(double) hist_approx_mean(const histogram_t *);
 API_EXPORT(double) hist_approx_sum(const histogram_t *);
 API_EXPORT(int) hist_approx_quantile(const histogram_t *, double *q_in, int nq, double *q_out);
 
-/* Fast allocations consume 2k + N * 4k more memory
+/* Fast allocations consume 2kb + N * 512b more memory
  * where N is the number of used exponents.  It allows for O(1) increments for
  * prexisting keys */
 API_EXPORT(histogram_t *) hist_alloc();
