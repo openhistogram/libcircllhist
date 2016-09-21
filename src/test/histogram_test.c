@@ -3,6 +3,9 @@
 #include <stdbool.h>
 #include <circllhist.h>
 
+typedef histogram_t *(*halloc_func)();
+halloc_func halloc = NULL;
+
 static int tcount = 1;
 static int failed = 0;
 static char *test_desc = "??";
@@ -135,7 +138,7 @@ void test1(double val, double b, double w) {
 
 histogram_t *build(double *vals, int nvals) {
   int i;
-  histogram_t *out = hist_fast_alloc();
+  histogram_t *out = halloc();
   for(i=0;i<nvals;i++)
     hist_insert(out, vals[i], 1);
   return out;
@@ -181,22 +184,26 @@ int main() {
   T(test1(-0.00123, -0.0012, -0.0001));
   T(test1(-987324, -980000, -10000));
 
-  double s1[] = { 0.123, 0, 0.43, 0.41, 0.415, 0.2201, 0.3201, 0.125, 0.13 };
-  T(mean_test(s1, 9, 0.24444));
-
-  double h[] = { 1 };
-  double qin[] = { 0, 0.25, 0.5, 1 };
-  double qout[] = { 1, 1.025, 1.05, 1.1 };
-  T(q_test(h, 1, qin, 4, qout));
-
-  double qin2[] = { 0, 0.95, 0.99, 1.0 };
-  double qout2[] = { 0, 0.4355, 0.4391, 0.44 };
-  T(q_test(s1, 9, qin2, 4, qout2));
-
-  double s3[] = { 1.0, 2.0 };
-  double qin3[] = { 0.5 };
-  double qout3[] = { 1.1 };
-  T(q_test(s3, 2, qin3, 1, qout3));
+  halloc = hist_alloc;
+  for(int ai=0; ai<2; ai++) {
+    double s1[] = { 0.123, 0, 0.43, 0.41, 0.415, 0.2201, 0.3201, 0.125, 0.13 };
+    T(mean_test(s1, 9, 0.24444));
+  
+    double h[] = { 1 };
+    double qin[] = { 0, 0.25, 0.5, 1 };
+    double qout[] = { 1, 1.025, 1.05, 1.1 };
+    T(q_test(h, 1, qin, 4, qout));
+  
+    double qin2[] = { 0, 0.95, 0.99, 1.0 };
+    double qout2[] = { 0, 0.4355, 0.4391, 0.44 };
+    T(q_test(s1, 9, qin2, 4, qout2));
+  
+    double s3[] = { 1.0, 2.0 };
+    double qin3[] = { 0.5 };
+    double qout3[] = { 1.1 };
+    T(q_test(s3, 2, qin3, 1, qout3));
+    halloc = hist_fast_alloc;
+  }
 
   printf("%d..%d\n", 1, tcount-1);
   return failed ? -1 : 0;
