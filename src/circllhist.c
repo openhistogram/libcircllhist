@@ -164,12 +164,14 @@ bv_read(histogram_t *h, int idx, const void *buff, ssize_t len) {
   tgt_type = cp[2];
   if(tgt_type > BVL8) return -1;
   if(len < 3 + tgt_type + 1) return -1;
-  h->bvs[idx].bucket.val = cp[0];
-  h->bvs[idx].bucket.exp = cp[1];
-  h->used++;
   for(i=tgt_type;i>=0;i--)
     count |= ((uint64_t)cp[i+3]) << (i * 8);
-  h->bvs[idx].count = count;
+  if(count != 0) {
+    h->bvs[idx].bucket.val = cp[0];
+    h->bvs[idx].bucket.exp = cp[1];
+    h->bvs[idx].count = count;
+    h->used++;
+  }
   return 3 + tgt_type + 1;
 }
 
@@ -179,7 +181,11 @@ hist_serialize_estimate(const histogram_t *h) {
   int i;
   ssize_t len = 2;
   if(h == NULL) return len;
-  for(i=0;i<h->used;i++) len += bv_size(h, i);
+  for(i=0;i<h->used;i++) {
+    if(h->bvs[i].count != 0) {
+      len += bv_size(h, i);
+    }
+  }
   return len;
 }
 
@@ -206,9 +212,11 @@ hist_serialize(const histogram_t *h, void *buff, ssize_t len) {
   ADVANCE(written, 2);
   for(i=0;h && i<h->used;i++) {
     ssize_t incr_written;
-    incr_written = bv_write(h, i, cp, len);
-    if(incr_written < 0) return -1;
-    ADVANCE(written, incr_written);
+    if(h->bvs[i].count) {
+      incr_written = bv_write(h, i, cp, len);
+      if(incr_written < 0) return -1;
+      ADVANCE(written, incr_written);
+    }
   }
   return written;
 }

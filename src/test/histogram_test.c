@@ -169,6 +169,43 @@ void q_test(double *vals, int nvals, double *in, int nin, double *expected) {
   hist_free(h);
 }
 
+void serialize_test() {
+  int i,j,failed=0;
+  histogram_t *in, *out;
+
+  /* We build it clear it and build it one shorter.. This way the 0.13 bucket will be zero */
+  double s[] = { 0.123, 0, 0.43, 0.41, 0.415, 0.2201, 0.3201, 0.125, 0.13, 13};
+  in = build(s, 10);
+  hist_clear(in);
+  for(i=0;i<9;i++) hist_insert(in, s[i], 1);
+
+  ssize_t len = hist_serialize_estimate(in);
+  char *serial;
+  serial = malloc(len);
+  len = hist_serialize(in, serial, len);
+  out = halloc();
+  hist_deserialize(out, serial, len);
+
+  if(hist_bucket_count(out) <= hist_bucket_count(in))
+    okf("%s", "serialized equal or smaller");
+  else notokf("%s", "serialized bigger");
+  if(hist_bucket_count(out) == 0) notokf("%s", "serialized to zero");
+  for(j=0, i=0; i<hist_bucket_count(in); i++) {
+    hist_bucket_t ib, ob;
+    uint64_t ic, oc;
+    hist_bucket_idx_bucket(in, i, &ib, &ic);
+    if(ic == 0) continue;
+    hist_bucket_idx_bucket(out, j++, &ob, &oc);
+    if(!(ib.val == ob.val && ib.exp == ob.exp && ic == oc))
+      failed = 1;
+  }
+  if(failed) notokf("%s", "histograms match");
+  else okf("%s %d buckets (%d empty)", "histograms match", j, i-j);
+
+  hist_free(in);
+  hist_free(out);
+}
+
 int main() {
   bucket_tests();
 
@@ -202,6 +239,9 @@ int main() {
     double qin3[] = { 0.5 };
     double qout3[] = { 1.1 };
     T(q_test(s3, 2, qin3, 1, qout3));
+
+    T(serialize_test());
+
     halloc = hist_fast_alloc;
   }
 
