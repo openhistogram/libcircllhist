@@ -26,6 +26,14 @@ static char *test_desc = "??";
 static void is(int expr) { 
   if(expr) { ok(); } else { notok(); }
 };
+#define isf(expr, fmt, ex...) do { \
+  if(expr) { \
+    printf("ok %d - %s : " fmt "\n", tcount++, test_desc, ex); \
+  } else { \
+    printf("not ok %d - %s : " fmt "\n", tcount++, test_desc, ex); \
+    failed++; \
+  } \
+} while(0)
 #define T(a) do { \
   test_desc = #a; \
   a; \
@@ -176,8 +184,15 @@ void serialize_test() {
   /* We build it clear it and build it one shorter.. This way the 0.13 bucket will be zero */
   double s[] = { 0.123, 0, 0.43, 0.41, 0.415, 0.2201, 0.3201, 0.125, 0.13, 13};
   in = build(s, 10);
+  uint64_t sc;
+  sc = hist_sample_count(in);
+  isf(sc == 10, "%s: %lu", "sample count", (unsigned long)sc);
   hist_clear(in);
+  sc = hist_sample_count(in);
+  isf(sc == 0, "%s: %lu", "sample count after clear", (unsigned long)sc);
   for(i=0;i<9;i++) hist_insert(in, s[i], 1);
+  sc = hist_sample_count(in);
+  isf(sc == 9, "%s: %lu", "sample count after reinsertion", (unsigned long)sc);
 
   ssize_t len = hist_serialize_estimate(in);
   char *serial;
@@ -204,6 +219,15 @@ void serialize_test() {
 
   hist_free(in);
   hist_free(out);
+}
+
+void sample_count_roll() {
+  histogram_t *toobig;
+  toobig = hist_alloc();
+  hist_insert(toobig, 1, ~((uint64_t)0));
+  hist_insert(toobig, 2, ~((uint64_t)0));
+  is(hist_sample_count(toobig) == ~((uint64_t)0));
+  hist_free(toobig);
 }
 
 int main() {
@@ -244,6 +268,8 @@ int main() {
 
     halloc = hist_fast_alloc;
   }
+
+  T(sample_count_roll());
 
   printf("%d..%d\n", 1, tcount-1);
   return failed ? -1 : 0;

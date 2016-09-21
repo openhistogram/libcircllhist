@@ -83,6 +83,7 @@ API_EXPORT(int) hist_bucket_idx_bucket(const histogram_t *hist, int idx, hist_bu
 API_EXPORT(int) hist_accumulate(histogram_t *tgt, const histogram_t * const *src, int cnt);
 API_EXPORT(int) hist_num_buckets(const histogram_t *hist);
 API_EXPORT(void) hist_clear(histogram_t *hist);
+API_EXPORT(uint64_t) hist_sample_count(const histogram_t *hist);
 
 API_EXPORT(ssize_t) hist_serialize_estimate(const histogram_t *h);
 API_EXPORT(ssize_t) hist_serialize(const histogram_t *h, void *buff, ssize_t len);

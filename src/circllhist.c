@@ -717,6 +717,18 @@ hist_remove(histogram_t *hist, double val, uint64_t count) {
   return 0;
 }
 
+uint64_t
+hist_sample_count(const histogram_t *hist) {
+  int i;
+  uint64_t total = 0, last = 0;
+  for(i=0;i<hist->used;i++) {
+    last = total;
+    total += hist->bvs[i].count;
+    if(total < last) return ~((uint64_t)0);
+  }
+  return total;
+}
+
 int
 hist_bucket_count(const histogram_t *hist) {
   return hist ? hist->used : 0;
