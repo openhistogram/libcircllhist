@@ -145,7 +145,6 @@ clean:
 
 Makefile.dep:
 	$(CC) -I. $(CPPFLAGS) $(CFLAGS) $(DEPFLAGS) *.c > Makefile.dep
-	$(top_srcdir)/buildtools/culldeps.sh Makefile.dep
 
 include Makefile.dep
 

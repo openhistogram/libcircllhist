@@ -41,7 +41,6 @@ else
 fi
 SHLDFLAGS="$LDFLAGS"
 
-CPPFLAGS="$CPPFLAGS -D _REENTRANT -D _XOPEN_SOURCE=600 -D _POSIX_SOURCE -D _POSIX_C_SOURCE=200112L -D _DEFAULT_SOURCE "'-I$(top_srcdir)/src'
 DOTSO=.so
 
 case $host in
@@ -61,7 +60,6 @@ case $host in
 	DTRACE=/usr/sbin/dtrace
 	DTRACE_ENABLED=1
 	CFLAGS="$CFLAGS"
-	CPPFLAGS="$CPPFLAGS -D__EXTENSIONS__"
 	if test "x$GCC" != "xyes" ; then
 		CFLAGS="$CFLAGS -mt"
 		PICFLAGS="-Kpic"
@@ -92,7 +90,6 @@ case $host in
 	;;
 *-*-linux*)
 	LDFLAGS="$LDFLAGS -Wl,-E"
-	CPPFLAGS="$CPPFLAGS -D_SVID_SOURCE -D_BSD_SOURCE -D_GNU_SOURCE"
 	PICFLAGS="-fpic"
 	MODULELD="$CC -shared"
 	SHLD="$CC -shared"
@@ -106,6 +103,7 @@ case $host in
 	MODULELD="$CC -shared"
 	LDFLAGS="$LDFLAGS -export-dynamic -L/usr/local/lib"
 	CFLAGS="$CFLAGS -DCOMPAT_43TTY -I/usr/local/include"
+	SHLD="$CC -shared"
 	MODULEEXT=so
 	RLDFLAG="-Wl,--rpath="
 	;;
@@ -116,6 +114,13 @@ case $host in
 	RLDFLAG="-Wl,--rpath="
 	;;
 esac
+
+CPPFLAGS="$CPPFLAGS -D_REENTRANT "'-I$(top_srcdir)/src'
+
+AC_CHECK_LIB(m, floor, ,)
+AC_CHECK_LIB(c, alloca, ,)
+
+
 AC_SUBST(DOTSO)
 AC_SUBST(DOTDYLIB)
 AC_SUBST(CLINKFLAGS)
@@ -134,137 +139,6 @@ AC_CHECK_SIZEOF(int, 4)
 AC_CHECK_SIZEOF(long int, 4)
 AC_CHECK_SIZEOF(long long int, 8)
 AC_CHECK_SIZEOF(void *, 1)
-
-AC_CACHE_CHECK([for u_int type], ac_cv_have_u_int, [
-	AC_TRY_COMPILE(
-		[ #include <sys/types.h> ], 
-		[ u_int a; a = 1;], 
-		[ ac_cv_have_u_int="yes" ],
-		[ ac_cv_have_u_int="no" ]
-	)
-])
-if test "x$ac_cv_have_u_int" = "xyes" ; then
-	AC_DEFINE(HAVE_U_INT)
-	have_u_int=1
-fi
-
-AC_CACHE_CHECK([for intXX_t types], ac_cv_have_intxx_t, [
-	AC_TRY_COMPILE(
-		[ #include <sys/types.h> ], 
-		[ int8_t a; int16_t b; int32_t c; a = b = c = 1;], 
-		[ ac_cv_have_intxx_t="yes" ],
-		[ ac_cv_have_intxx_t="no" ]
-	)
-])
-if test "x$ac_cv_have_intxx_t" = "xyes" ; then
-	AC_DEFINE(HAVE_INTXX_T)
-	have_intxx_t=1
-fi
-	
-AC_CACHE_CHECK([for int64_t type], ac_cv_have_int64_t, [
-	AC_TRY_COMPILE(
-		[ #include <sys/types.h> ], 
-		[ int64_t a; a = 1;], 
-		[ ac_cv_have_int64_t="yes" ],
-		[ ac_cv_have_int64_t="no" ]
-	)
-])
-if test "x$ac_cv_have_int64_t" = "xyes" ; then
-	AC_DEFINE(HAVE_INT64_T)
-	have_int64_t=1
-fi
-	
-AC_CACHE_CHECK([for u_intXX_t types], ac_cv_have_u_intxx_t, [
-	AC_TRY_COMPILE(
-		[ #include <sys/types.h> ], 
-		[ u_int8_t a; u_int16_t b; u_int32_t c; a = b = c = 1;], 
-		[ ac_cv_have_u_intxx_t="yes" ],
-		[ ac_cv_have_u_intxx_t="no" ]
-	)
-])
-if test "x$ac_cv_have_u_intxx_t" = "xyes" ; then
-	AC_DEFINE(HAVE_U_INTXX_T)
-	have_u_intxx_t=1
-fi
-
-AC_CACHE_CHECK([for u_int64_t types], ac_cv_have_u_int64_t, [
-	AC_TRY_COMPILE(
-		[ #include <sys/types.h> ], 
-		[ u_int64_t a; a = 1;], 
-		[ ac_cv_have_u_int64_t="yes" ],
-		[ ac_cv_have_u_int64_t="no" ]
-	)
-])
-if test "x$ac_cv_have_u_int64_t" = "xyes" ; then
-	AC_DEFINE(HAVE_U_INT64_T)
-	have_u_int64_t=1
-fi
-
-if (test -z "$have_u_intxx_t" || test -z "$have_intxx_t" && \
-	test "x$ac_cv_header_sys_bitypes_h" = "xyes")
-then
-	AC_MSG_CHECKING([for intXX_t and u_intXX_t types in sys/bitypes.h])
-	AC_TRY_COMPILE(
-		[
-#include <sys/bitypes.h>
-		], 
-		[
-			int8_t a; int16_t b; int32_t c;
-			u_int8_t e; u_int16_t f; u_int32_t g;
-			a = b = c = e = f = g = 1;
-		], 
-		[
-			AC_DEFINE(HAVE_U_INTXX_T)
-			AC_DEFINE(HAVE_INTXX_T)
-			AC_MSG_RESULT(yes)
-		],
-		[AC_MSG_RESULT(no)]
-	) 
-fi
-
-if test -z "$have_u_intxx_t" ; then
-	AC_CACHE_CHECK([for uintXX_t types], ac_cv_have_uintxx_t, [
-		AC_TRY_COMPILE(
-			[
-#include <sys/types.h>
-			], 
-			[ uint8_t a; uint16_t b; uint32_t c; a = b = c = 1; ], 
-			[ ac_cv_have_uintxx_t="yes" ],
-			[ ac_cv_have_uintxx_t="no" ]
-		)
-	])
-	if test "x$ac_cv_have_uintxx_t" = "xyes" ; then
-		AC_DEFINE(HAVE_UINTXX_T)
-	fi
-fi
-
-AC_CACHE_CHECK([for size_t], ac_cv_have_size_t, [
-	AC_TRY_COMPILE(
-		[
-#include <sys/types.h>
-		],
-		[ size_t foo; foo = 1235; ],
-		[ ac_cv_have_size_t="yes" ],
-		[ ac_cv_have_size_t="no" ]
-	)
-])
-if test "x$ac_cv_have_size_t" = "xyes" ; then
-	AC_DEFINE(HAVE_SIZE_T)
-fi
-
-AC_CACHE_CHECK([for ssize_t], ac_cv_have_ssize_t, [
-	AC_TRY_COMPILE(
-		[
-#include <sys/types.h>
-		],
-		[ ssize_t foo; foo = 1235; ],
-		[ ac_cv_have_ssize_t="yes" ],
-		[ ac_cv_have_ssize_t="no" ]
-	)
-])
-if test "x$ac_cv_have_ssize_t" = "xyes" ; then
-	AC_DEFINE(HAVE_SSIZE_T)
-fi
 
 SHCFLAGS="$PICFLAGS $CFLAGS"
 AC_SUBST(SHCFLAGS)

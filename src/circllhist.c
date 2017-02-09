@@ -28,11 +28,14 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "circllhist_config.h"
 #include <assert.h>
 
 #include <stdio.h>
 #include <stdlib.h>
+#ifdef HAVE_ALLOCA_H
 #include <alloca.h>
+#endif
 #include <errno.h>
 #include <sys/types.h>
 #include <string.h>
