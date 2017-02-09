@@ -119,7 +119,6 @@ CPPFLAGS="$CPPFLAGS -D_REENTRANT "'-I$(top_srcdir)/src'
 
 AC_CHECK_HEADERS([alloca.h])
 AC_CHECK_LIB(m, floor, ,)
-AC_CHECK_LIB(c, alloca, ,)
 
 
 AC_SUBST(DOTSO)
