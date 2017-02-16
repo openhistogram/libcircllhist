@@ -43,6 +43,10 @@ SHLDFLAGS="$LDFLAGS"
 
 DOTSO=.so
 
+if test "x$COPT" = "x" ; then
+	COPT="-O5"
+fi
+
 case $host in
 *-*-darwin*)
 	DOTSO=
@@ -124,6 +128,7 @@ AC_CHECK_LIB(m, floor, ,)
 AC_SUBST(DOTSO)
 AC_SUBST(DOTDYLIB)
 AC_SUBST(CLINKFLAGS)
+AC_SUBST(COPT)
 AC_SUBST(SHLD)
 AC_SUBST(RLDFLAG)
 AC_SUBST(DEPFLAGS)
