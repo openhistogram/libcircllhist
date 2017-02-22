@@ -95,15 +95,7 @@ struct hist_flevel {
   uint8_t l2;
   uint8_t l1;
 };
-struct histogram {
-  uint16_t allocd;
-  uint16_t used;
-  uint32_t fast:1;
-  struct {
-    hist_bucket_t bucket;
-    uint64_t count;
-  } __attribute__((packed)) *bvs;
-};
+
 struct histogram_fast {
   struct histogram internal;
   uint16_t *faster[256];

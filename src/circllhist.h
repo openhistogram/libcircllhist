@@ -37,8 +37,6 @@
 #include <sys/types.h>
 #include <stdint.h>
 
-typedef struct histogram histogram_t;
-
 typedef struct hist_rollup_config hist_rollup_config_t;
 
 
@@ -54,6 +52,18 @@ typedef struct hist_bucket {
   int8_t exp; /* -128 -> 127 */
 } hist_bucket_t;
 
+// a bucket/value pair
+struct hist_bv_pair {
+  hist_bucket_t bucket;
+  uint64_t count;
+} __attribute__((packed));
+
+typedef struct histogram {
+  uint16_t allocd;   // number of allocated bv pairs
+  uint16_t used;     // number of used bv pairs
+  uint32_t fast: 1;
+  struct hist_bv_pair *bvs; // pointer to bv-pairs
+} histogram_t;
 
 API_EXPORT(double) hist_bucket_to_double(hist_bucket_t hb);
 API_EXPORT(double) hist_bucket_to_double_bin_width(hist_bucket_t hb);
