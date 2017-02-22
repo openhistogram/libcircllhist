@@ -230,15 +230,6 @@ void sample_count_roll() {
   hist_free(toobig);
 }
 
-void hist_print(histogram_t * hist){
-  int total = hist_bucket_count(hist);
-  printf("TOTAL: %d\n", total);
-  for(int idx = 0; idx < total; idx++) {
-    struct hist_bv_pair bv = hist->bvs[idx];
-    printf("[%e] : %d\n", hist_bucket_to_double(bv.bucket), (int) bv.count);
-  }
-}
-
 void compress_test() {
   /* We build it clear it and build it one shorter.. This way the 0.13 bucket will be zero */
   double s[] = { -1000, -1, -0.1, -0.0001, 0, 0.0001, 0.001, 0.002, 0.01, 0.1, 1., 1000, 10000 };

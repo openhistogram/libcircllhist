@@ -37,33 +37,23 @@
 #include <sys/types.h>
 #include <stdint.h>
 
-typedef struct hist_rollup_config hist_rollup_config_t;
+typedef struct histogram histogram_t;
 
+typedef struct hist_rollup_config hist_rollup_config_t;
 
 /* A hist_bucket structure represents a histogram bucket with the following
  * dimensions:
  * - (val < -99 || 99 < val) => Invalid bucket
  * - (-10 < val && val < 10) => (-10^-127 .. +10^-127) zero bucket
- * - val > 0 => [ val/10*10^exp .. (val+1)/10*10^exp )
- * - val < 0 => ( (val-1)/10*10^exp .. val/10*10^exp ]
+ * - val > 0 => [ (val/10)*10^exp .. (val+1)/10*10^exp )
+ * - val < 0 => ( (val-1)/10*10^exp .. (val/10)*10^exp ]
  */
-typedef struct hist_bucket {
-  int8_t val; /* value * 10 */
-  int8_t exp; /* -128 -> 127 */
-} hist_bucket_t;
+struct hist_bucket {
+  int8_t val; // value * 10
+  int8_t exp; // -128 -> 127
+};
 
-// a bucket/value pair
-struct hist_bv_pair {
-  hist_bucket_t bucket;
-  uint64_t count;
-} __attribute__((packed));
-
-typedef struct histogram {
-  uint16_t allocd;   // number of allocated bv pairs
-  uint16_t used;     // number of used bv pairs
-  uint32_t fast: 1;
-  struct hist_bv_pair *bvs; // pointer to bv-pairs
-} histogram_t;
+typedef struct hist_bucket hist_bucket_t;
 
 API_EXPORT(double) hist_bucket_to_double(hist_bucket_t hb);
 API_EXPORT(double) hist_bucket_to_double_bin_width(hist_bucket_t hb);

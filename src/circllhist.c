@@ -96,6 +96,18 @@ struct hist_flevel {
   uint8_t l1;
 };
 
+struct hist_bv_pair {
+  hist_bucket_t bucket;
+  uint64_t count;
+}__attribute__((packed));
+
+struct histogram {
+  uint16_t allocd; // number of allocated bv pairs
+  uint16_t used;   // number of used bv pairs
+  uint32_t fast: 1;
+  struct hist_bv_pair *bvs; // pointer to bv-pairs
+};
+
 struct histogram_fast {
   struct histogram internal;
   uint16_t *faster[256];
@@ -900,7 +912,7 @@ hist_free(histogram_t *hist) {
 //! This compression is lossy. mean/quantiles will be affected by compression.
 //! Intended use cases is visualization.
 //! \param hist
-//! \param mbe the Minimum Bucket Exponent. Valid range -128..+127
+//! \param mbe the Minimum Bucket Exponent
 //! \return the compressed histogram as new value
 histogram_t *
 hist_compress_mbe(histogram_t *hist, int8_t mbe) {
@@ -915,7 +927,7 @@ hist_compress_mbe(histogram_t *hist, int8_t mbe) {
       hist_insert_raw(hist_compressed, (hist_bucket_t) {.exp = 0, .val = 0}, bv.count);
     }
     else {
-      // copy over the bucket
+      // copy over
       hist_insert_raw(hist_compressed, bv.bucket, bv.count);
     }
   }
