@@ -894,3 +894,30 @@ hist_free(histogram_t *hist) {
   }
   free(hist);
 }
+
+//! Compress histogram by squshing together adjacent buckets
+//!
+//! This compression is lossy. mean/quantiles will be affected by compression.
+//! Intended use cases is visualization.
+//! \param hist
+//! \param mbe the Minimum Bucket Exponent. Valid range -128..+127
+//! \return the compressed histogram as new value
+histogram_t *
+hist_compress_mbe(histogram_t *hist, int8_t mbe) {
+  histogram_t *hist_compressed = hist_alloc();
+  int total = hist_bucket_count(hist);
+  for(int idx=0; idx<total; idx++) {
+    struct hist_bv_pair bv = hist->bvs[idx];
+    // we know that stored buckets are valid (abs(val)>=10)
+    // so it suffices to check the exponent
+    if (bv.bucket.exp < mbe) {
+      // merge into zero bucket
+      hist_insert_raw(hist_compressed, (hist_bucket_t) {.exp = 0, .val = 0}, bv.count);
+    }
+    else {
+      // copy over the bucket
+      hist_insert_raw(hist_compressed, bv.bucket, bv.count);
+    }
+  }
+  return hist_compressed;
+}

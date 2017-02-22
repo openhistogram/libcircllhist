@@ -23,7 +23,7 @@ static char *test_desc = "??";
   printf("not ok %d - %s\n", tcount++, test_desc); \
   failed++; \
 } while(0)
-static void is(int expr) { 
+static void is(int expr) {
   if(expr) { ok(); } else { notok(); }
 };
 #define isf(expr, fmt, ex...) do { \
@@ -230,6 +230,29 @@ void sample_count_roll() {
   hist_free(toobig);
 }
 
+void hist_print(histogram_t * hist){
+  int total = hist_bucket_count(hist);
+  printf("TOTAL: %d\n", total);
+  for(int idx = 0; idx < total; idx++) {
+    struct hist_bv_pair bv = hist->bvs[idx];
+    printf("[%e] : %d\n", hist_bucket_to_double(bv.bucket), (int) bv.count);
+  }
+}
+
+void compress_test() {
+  /* We build it clear it and build it one shorter.. This way the 0.13 bucket will be zero */
+  double s[] = { -1000, -1, -0.1, -0.0001, 0, 0.0001, 0.001, 0.002, 0.01, 0.1, 1., 1000, 10000 };
+  histogram_t *h = build(s, 13);
+  h = hist_compress_mbe(h, -2);
+  T(is(hist_bucket_count(h) == 9));
+  h = hist_compress_mbe(h, -1);
+  T(is(hist_bucket_count(h) == 8));
+  h = hist_compress_mbe(h, 0);
+  T(is(hist_bucket_count(h) == 6));
+  h = hist_compress_mbe(h, 100);
+  T(is(hist_bucket_count(h) == 1));
+}
+
 int main() {
   bucket_tests();
 
@@ -249,16 +272,16 @@ int main() {
   for(int ai=0; ai<2; ai++) {
     double s1[] = { 0.123, 0, 0.43, 0.41, 0.415, 0.2201, 0.3201, 0.125, 0.13 };
     T(mean_test(s1, 9, 0.24444));
-  
+
     double h[] = { 1 };
     double qin[] = { 0, 0.25, 0.5, 1 };
     double qout[] = { 1, 1.025, 1.05, 1.1 };
     T(q_test(h, 1, qin, 4, qout));
-  
+
     double qin2[] = { 0, 0.95, 0.99, 1.0 };
     double qout2[] = { 0, 0.4355, 0.4391, 0.44 };
     T(q_test(s1, 9, qin2, 4, qout2));
-  
+
     double s3[] = { 1.0, 2.0 };
     double qin3[] = { 0.5 };
     double qout3[] = { 1.1 };
@@ -270,6 +293,8 @@ int main() {
   }
 
   T(sample_count_roll());
+
+  compress_test();
 
   printf("%d..%d\n", 1, tcount-1);
   return failed ? -1 : 0;

@@ -102,4 +102,6 @@ API_EXPORT(ssize_t) hist_serialize_b64_estimate(const histogram_t *h);
 API_EXPORT(ssize_t) hist_serialize_b64(const histogram_t *h, char *b64_serialized_histo_buff, ssize_t buff_len);
 API_EXPORT(ssize_t) hist_deserialize_b64(histogram_t *h, const void *b64_string, ssize_t b64_string_len);
 
+API_EXPORT(histogram_t *) hist_compress_mbe(histogram_t *h, int8_t mbe);
+
 #endif
