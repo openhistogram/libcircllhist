@@ -639,6 +639,10 @@ hist_internal_find(histogram_t *hist, hist_bucket_t hb, int *idx) {
   return 0;
 }
 
+//! Insert a single bucket + count into a histogram
+//!
+//! Updates counts if the bucket exists
+//! Handles re-allocation of new buckets if needed
 uint64_t
 hist_insert_raw(histogram_t *hist, hist_bucket_t hb, uint64_t count) {
   int found, idx;
@@ -665,7 +669,7 @@ hist_insert_raw(histogram_t *hist, hist_bucket_t hb, uint64_t count) {
       hist->bvs = dummy.bvs;
       hist->allocd += DEFAULT_HIST_SIZE;
     }
-    else {
+    else { // used !== alloced
       /* We need to shuffle out data to poke the new one in */
       memmove(hist->bvs + idx + 1, hist->bvs + idx,
               (hist->used - idx)*sizeof(*hist->bvs));
@@ -684,7 +688,7 @@ hist_insert_raw(histogram_t *hist, hist_bucket_t hb, uint64_t count) {
       }
     }
   }
-  else {
+  else { // found
     /* Just need to update the counters */
     uint64_t newval = hist->bvs[idx].count + count;
     if(newval < hist->bvs[idx].count) /* we rolled */
@@ -737,6 +741,11 @@ hist_bucket_count(const histogram_t *hist) {
   return hist ? hist->used : 0;
 }
 
+//! Computes bucket, count at position idx
+//! \param[*histogram_t] hist
+//! \param[int]          idx
+//! \param[*double]      bucket
+//! \param[*unit64_t]    count
 int
 hist_bucket_idx(const histogram_t *hist, int idx,
                 double *bucket, uint64_t *count) {

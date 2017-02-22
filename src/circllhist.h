@@ -41,20 +41,19 @@ typedef struct histogram histogram_t;
 
 typedef struct hist_rollup_config hist_rollup_config_t;
 
+
+/* A hist_bucket structure represents a histogram bucket with the following
+ * dimensions:
+ * - (val < -99 || 99 < val) => Invalid bucket
+ * - (-10 < val && val < 10) => (-10^-127 .. +10^-127) zero bucket
+ * - val > 0 => [ val/10*10^exp .. (val+1)/10*10^exp )
+ * - val < 0 => ( (val-1)/10*10^exp .. val/10*10^exp ]
+ */
 typedef struct hist_bucket {
   int8_t val; /* value * 10 */
   int8_t exp; /* -128 -> 127 */
 } hist_bucket_t;
 
-/* These 16 bits give us:
- * Allows us to express exactly:
- *   given A.B == val / 10;
- *   A.B e X
- *   where -9 <= A <= 9, but A != 0
- *         0 <= B <= 9
- *         X is all possible exp (above)
- *  if A is zero, the overall value is zero.
- */
 
 API_EXPORT(double) hist_bucket_to_double(hist_bucket_t hb);
 API_EXPORT(double) hist_bucket_to_double_bin_width(hist_bucket_t hb);
