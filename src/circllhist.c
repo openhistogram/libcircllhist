@@ -96,16 +96,20 @@ struct hist_flevel {
   uint8_t l1;
 };
 
+//! A bucket-count pair
 struct hist_bv_pair {
   hist_bucket_t bucket;
   uint64_t count;
 }__attribute__((packed));
 
+//! The histogram structure
+//! Internals are regarded private and might change with version.
+//! Only use the public methods to operate on this structure.
 struct histogram {
-  uint16_t allocd; // number of allocated bv pairs
-  uint16_t used;   // number of used bv pairs
+  uint16_t allocd; //!< number of allocated bv pairs
+  uint16_t used;   //!< number of used bv pairs
   uint32_t fast: 1;
-  struct hist_bv_pair *bvs; // pointer to bv-pairs
+  struct hist_bv_pair *bvs; //!< pointer to bv-pairs
 };
 
 struct histogram_fast {
@@ -643,10 +647,6 @@ hist_internal_find(histogram_t *hist, hist_bucket_t hb, int *idx) {
   return 0;
 }
 
-//! Insert a single bucket + count into a histogram
-//!
-//! Updates counts if the bucket exists
-//! Handles re-allocation of new buckets if needed
 uint64_t
 hist_insert_raw(histogram_t *hist, hist_bucket_t hb, uint64_t count) {
   int found, idx;
@@ -745,11 +745,6 @@ hist_bucket_count(const histogram_t *hist) {
   return hist ? hist->used : 0;
 }
 
-//! Computes bucket, count at position idx
-//! \param[*histogram_t] hist
-//! \param[int]          idx
-//! \param[*double]      bucket
-//! \param[*unit64_t]    count
 int
 hist_bucket_idx(const histogram_t *hist, int idx,
                 double *bucket, uint64_t *count) {
@@ -907,13 +902,6 @@ hist_free(histogram_t *hist) {
   free(hist);
 }
 
-//! Compress histogram by squshing together adjacent buckets
-//!
-//! This compression is lossy. mean/quantiles will be affected by compression.
-//! Intended use cases is visualization.
-//! \param hist
-//! \param mbe the Minimum Bucket Exponent
-//! \return the compressed histogram as new value
 histogram_t *
 hist_compress_mbe(histogram_t *hist, int8_t mbe) {
   histogram_t *hist_compressed = hist_alloc();

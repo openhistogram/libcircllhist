@@ -13,3 +13,6 @@ tests:
 distclean: 	clean
 	rm -f Makefile config.status config.log
 	(cd src && $(MAKE) distclean)
+
+docs:
+	doxygen Doxyfile
