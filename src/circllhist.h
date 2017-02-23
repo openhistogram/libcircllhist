@@ -60,9 +60,9 @@ API_EXPORT(double) hist_bucket_to_double(hist_bucket_t hb);
 API_EXPORT(double) hist_bucket_midpoint(hist_bucket_t in);
 //! Get the width of the hist_bucket
 API_EXPORT(double) hist_bucket_to_double_bin_width(hist_bucket_t hb);
-//! Calculate the bucket that a value belongs to
+//! Create the bucket that a value belongs to
 API_EXPORT(hist_bucket_t) double_to_hist_bucket(double d);
-//! ?
+//! Create the bucket that value * 10^(scale) belongs to
 API_EXPORT(hist_bucket_t) int_scale_to_hist_bucket(int64_t value, int scale);
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -85,9 +85,13 @@ API_EXPORT(void) hist_free(histogram_t *hist);
 ////////////////////////////////////////////////////////////////////////////////
 // Getting data in and out of histograms
 
-//! insert a value into a histogram
+/*! Inserting double values converts from IEEE double to a small static integer
+ *  base and can suffer from floating point math skew.  Using the intscale
+ *  variant is more precise and significantly faster if you already have
+ *  integer measurements. */
+//! insert a value into a histogram count times
 API_EXPORT(uint64_t) hist_insert(histogram_t *hist, double val, uint64_t count);
-//! Remove data from a histogram
+//! Remove data from a histogram count times
 API_EXPORT(uint64_t) hist_remove(histogram_t *hist, double val, uint64_t count);
 //! Insert a single bucket + count into a histogram
 //!
@@ -98,23 +102,23 @@ API_EXPORT(uint64_t) hist_insert_raw(histogram_t *hist, hist_bucket_t hb, uint64
 API_EXPORT(int) hist_bucket_count(const histogram_t *hist);
 //! Same as hist_bucket_count
 API_EXPORT(int) hist_num_buckets(const histogram_t *hist);
-///! Get the total number of values stored in the histogram
+//! Get the total number of values stored in the histogram
 API_EXPORT(uint64_t) hist_sample_count(const histogram_t *hist);
 //! Get value+count for bucket at position idx. Valid positions are 0 .. hist_bucket_count()
 API_EXPORT(int) hist_bucket_idx(const histogram_t *hist, int idx, double *v, uint64_t *c);
 //! Get bucket+count for bucket at position idx. Valid positions are 0 .. hist_bucket_count()
 API_EXPORT(int) hist_bucket_idx_bucket(const histogram_t *hist, int idx, hist_bucket_t *b, uint64_t *c);
-//! ?
+//! Accumulate bins from each of cnt histograms in src onto tgt
 API_EXPORT(int) hist_accumulate(histogram_t *tgt, const histogram_t * const *src, int cnt);
 //! Clear data fast. Keeps buckets allocated.
 API_EXPORT(void) hist_clear(histogram_t *hist);
-//! ?
+//! Insert a value into a histogram value = val * 10^(scale)
 API_EXPORT(uint64_t) hist_insert_intscale(histogram_t *hist, int64_t val, int scale, uint64_t count);
 
 ////////////////////////////////////////////////////////////////////////////////
 // Serialization
 
-//! Serialize histogram to highly compressed binary data
+//! Serialize histogram to binary data
 API_EXPORT(ssize_t) hist_serialize(const histogram_t *h, void *buff, ssize_t len);
 API_EXPORT(ssize_t) hist_deserialize(histogram_t *h, const void *buff, ssize_t len);
 API_EXPORT(ssize_t) hist_serialize_estimate(const histogram_t *h);
