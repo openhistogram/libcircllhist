@@ -52,7 +52,7 @@ typedef struct hist_bucket {
 } hist_bucket_t;
 
 ////////////////////////////////////////////////////////////////////////////////
-// Histogram Buckets
+// Histogram buckets
 
 //! Returns the edge of the histogram bucket closer to zero
 API_EXPORT(double) hist_bucket_to_double(hist_bucket_t hb);
@@ -66,7 +66,7 @@ API_EXPORT(hist_bucket_t) double_to_hist_bucket(double d);
 API_EXPORT(hist_bucket_t) int_scale_to_hist_bucket(int64_t value, int scale);
 
 ////////////////////////////////////////////////////////////////////////////////
-// Creating and Destroying Histograms
+// Creating and destroying histograms
 
 //! Create a new histogram
 API_EXPORT(histogram_t *) hist_alloc();
