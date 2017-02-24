@@ -19,7 +19,7 @@ function tester.test1_default_empty()
   writer("test1_default_empty()...")
   if histo_lib.hist_bucket_count(histo) == 0 then
       writer("SUCCESS\n")
-  else 
+  else
       writer("FAIL\n")
   end
 end
@@ -30,7 +30,7 @@ function tester.test2_single_bucket()
   histo_lib.hist_insert(histo, 3.1, 5)
   if histo_lib.hist_bucket_count(histo) == 1 then
     writer("SUCCESS\n")
-  else 
+  else
     writer("FAIL\n")
   end
 
@@ -48,7 +48,7 @@ function tester.test2_single_bucket()
   writer("  single bucket, value read...")
   if value[0] == 3.1 then
     writer("SUCCESS\n")
-  else 
+  else
     writer("FAIL\n")
   end
 
@@ -60,10 +60,9 @@ function tester.test2_single_bucket()
   end
 end
 
-function runTests() 
+function runTests()
     tester.setup()
     tester.test1_default_empty()
     tester.test2_single_bucket()
     tester.teardown()
 end
-

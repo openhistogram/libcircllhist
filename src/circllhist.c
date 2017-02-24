@@ -95,15 +95,23 @@ struct hist_flevel {
   uint8_t l2;
   uint8_t l1;
 };
+
+//! A bucket-count pair
+struct hist_bv_pair {
+  hist_bucket_t bucket;
+  uint64_t count;
+}__attribute__((packed));
+
+//! The histogram structure
+//! Internals are regarded private and might change with version.
+//! Only use the public methods to operate on this structure.
 struct histogram {
-  uint16_t allocd;
-  uint16_t used;
-  uint32_t fast:1;
-  struct {
-    hist_bucket_t bucket;
-    uint64_t count;
-  } __attribute__((packed)) *bvs;
+  uint16_t allocd; //!< number of allocated bv pairs
+  uint16_t used;   //!< number of used bv pairs
+  uint32_t fast: 1;
+  struct hist_bv_pair *bvs; //!< pointer to bv-pairs
 };
+
 struct histogram_fast {
   struct histogram internal;
   uint16_t *faster[256];
@@ -665,7 +673,7 @@ hist_insert_raw(histogram_t *hist, hist_bucket_t hb, uint64_t count) {
       hist->bvs = dummy.bvs;
       hist->allocd += DEFAULT_HIST_SIZE;
     }
-    else {
+    else { // used !== alloced
       /* We need to shuffle out data to poke the new one in */
       memmove(hist->bvs + idx + 1, hist->bvs + idx,
               (hist->used - idx)*sizeof(*hist->bvs));
@@ -684,7 +692,7 @@ hist_insert_raw(histogram_t *hist, hist_bucket_t hb, uint64_t count) {
       }
     }
   }
-  else {
+  else { // found
     /* Just need to update the counters */
     uint64_t newval = hist->bvs[idx].count + count;
     if(newval < hist->bvs[idx].count) /* we rolled */
@@ -892,4 +900,31 @@ hist_free(histogram_t *hist) {
     for(i=0;i<256;i++) free(hfast->faster[i]);
   }
   free(hist);
+}
+
+histogram_t *
+hist_compress_mbe(histogram_t *hist, int8_t mbe) {
+  histogram_t *hist_compressed = hist_alloc();
+  int total = hist_bucket_count(hist);
+  for(int idx=0; idx<total; idx++) {
+    struct hist_bv_pair bv = hist->bvs[idx];
+    // we know that stored buckets are valid (abs(val)>=10)
+    // so it suffices to check the exponent
+    if (bv.bucket.exp < mbe) {
+      // merge into zero bucket
+      hist_insert_raw(hist_compressed, (hist_bucket_t) {.exp = 0, .val = 0}, bv.count);
+    }
+    else if (bv.bucket.exp == mbe) {
+      // re-bucket to val = 10, 20, ... 90
+      hist_insert_raw(hist_compressed, (hist_bucket_t) {
+        .exp = bv.bucket.exp,
+        .val = (bv.bucket.val/10) * 10
+      }, bv.count);
+    }
+    else {
+      // copy over
+      hist_insert_raw(hist_compressed, bv.bucket, bv.count);
+    }
+  }
+  return hist_compressed;
 }
