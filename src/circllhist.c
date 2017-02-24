@@ -918,7 +918,7 @@ hist_compress_mbe(histogram_t *hist, int8_t mbe) {
       // re-bucket to val = 10, 20, ... 90
       hist_insert_raw(hist_compressed, (hist_bucket_t) {
         .exp = bv.bucket.exp,
-        .val = bv.bucket.val - bv.bucket.val % 10,
+        .val = (bv.bucket.val/10) * 10
       }, bv.count);
     }
     else {
