@@ -231,16 +231,18 @@ void sample_count_roll() {
 }
 
 void compress_test() {
-  /* We build it clear it and build it one shorter.. This way the 0.13 bucket will be zero */
-  double s[] = { -1000, -1, -0.1, -0.0001, 0, 0.0001, 0.001, 0.002, 0.01, 0.1, 1., 1000, 10000 };
-  histogram_t *h = build(s, 13);
-  h = hist_compress_mbe(h, -2);
-  T(is(hist_bucket_count(h) == 9));
-  h = hist_compress_mbe(h, -1);
-  T(is(hist_bucket_count(h) == 8));
+  double s[] = { 0,1,2,3,10,11,12,21,22,23,99,100,110,120,210,220 };
+  // mbe = 0:    0 1 2 3 10 11 12 21 22 23 90 100 110 120 210 220 => 16 buckets
+  // mbe = 1:    0 0 0 0 10 10 10 20 20 20 90 100 110 120 210 220 => 9 buckets
+  // mbe = 2:    0 0 0 0 0  0  0  0  0  0  0  100 100 100 200 200 => 3 buckets
+  histogram_t *h = build(s, sizeof(s)/sizeof(double));
   h = hist_compress_mbe(h, 0);
-  T(is(hist_bucket_count(h) == 6));
-  h = hist_compress_mbe(h, 100);
+  T(is(hist_bucket_count(h) == 16));
+  h = hist_compress_mbe(h, 1);
+  T(is(hist_bucket_count(h) == 9));
+  h = hist_compress_mbe(h, 2);
+  T(is(hist_bucket_count(h) == 3));
+  h = hist_compress_mbe(h, 3);
   T(is(hist_bucket_count(h) == 1));
 }
 
