@@ -73,7 +73,7 @@ endif
 
 LUA_FFI=lua/ffi_libcircllhist.lua
 
-TARGETS=$(LIBCIRCLLHISTA) $(LIBCIRCLLHIST) $(LUA_FFI) test/histogram_test test/histogram_perf
+TARGETS=$(LIBCIRCLLHISTA) $(LIBCIRCLLHIST) $(LUA_FFI) test/histogram_test test/histogram_perf circlltool
 
 all:	reversion $(TARGETS)
 
@@ -106,7 +106,10 @@ test/histogram_test: test/histogram_test.c $(LIBCIRCLLHIST)
 test/histogram_perf: test/histogram_perf.c $(LIBCIRCLLHIST)
 	$(Q)$(CC) -I. $(CPPFLAGS) $(CFLAGS) -L. $(LDFLAGS) -I. -o $@ test/histogram_perf.c -lcircllhist -lm
 
-$(LUA_FFI): 
+circlltool: circlltool.c $(LIBCIRCLLHIST)
+	$(Q)$(CC) -I. $(CPPFLAGS) $(CFLAGS) -L. $(LDFLAGS) -I. -o $@ circlltool.c -lcircllhist
+
+$(LUA_FFI):
 	./generateLuaFiles.sh . $@
 
 .c.lo:
@@ -148,5 +151,4 @@ Makefile.dep:
 
 include Makefile.dep
 
-distclean:	clean 
-
+distclean:	clean
