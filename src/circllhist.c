@@ -43,6 +43,7 @@
 #include <math.h>
 #include <arpa/inet.h>
 #include <ctype.h>
+#include <stdarg.h>
 
 #include "circllhist.h"
 
@@ -927,4 +928,68 @@ hist_compress_mbe(histogram_t *hist, int8_t mbe) {
     }
   }
   return hist_compressed;
+}
+
+typedef struct {
+  void * ptr;
+  size_t size;
+  size_t free;
+} dbuf;
+
+#define DBUF_BASE_ALLOC 1
+
+dbuf
+dbuf_init() {
+  dbuf buf;
+  buf.ptr = malloc(DBUF_BASE_ALLOC);
+  buf.size = DBUF_BASE_ALLOC;
+  buf.free = DBUF_BASE_ALLOC;
+  if(buf.ptr == NULL) return -1;
+  return buf;
+}
+
+int
+dbuf_grow(dbuf buf) {
+  buf.free += buf.size;
+  buf.size *= 2;
+  buf.ptr = realloc(buf.ptr, buf.size);
+  if (buf.ptr == NULL) return -1;
+  return 0;
+}
+
+void *
+dbuf_pos(dbuf buf) {
+  return buf.ptr + buf.size - buf.free;
+}
+
+int
+dbuf_sprintf(dbuf buf, char * fmt, ...) {
+  int written = 0;
+  int rc = 0;
+  do {
+    va_list args;
+    va_start(args, fmt);
+    written = vsnprintf(dbuf_pos(buf), buf.free, fmt, args);
+    va_end (args);
+    if (sizeof(char) * written < buf.free) break;
+    rc = dbuf_grow(buf);
+    if (rc < 0) { return -1; }
+  } while (1);
+  return 0;
+}
+
+char *
+hist_serialize_json(const histogram_t *h) {
+  int total = hist_bucket_count(h);
+  dbuf buf = dbuf_init();
+  hist_bucket_t bucket;
+  uint64_t count;
+  dbuf_sprintf(buf, "{");
+  for(int i=0; i<total; i++){
+    hist_bucket_idx_bucket(h, i, &bucket, &count);
+    dbuf_sprintf(buf, "\"%de%d\":%llu", bucket.val, bucket.exp-1, count);
+    if(i<total-1) printf(",");
+  }
+  dbuf_sprintf(buf, "}\n");
+  return buf.ptr;
 }
