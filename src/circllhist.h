@@ -126,6 +126,9 @@ API_EXPORT(ssize_t) hist_serialize_estimate(const histogram_t *h);
 API_EXPORT(ssize_t) hist_serialize_b64(const histogram_t *h, char *b64_serialized_histo_buff, ssize_t buff_len);
 API_EXPORT(ssize_t) hist_deserialize_b64(histogram_t *h, const void *b64_string, ssize_t b64_string_len);
 API_EXPORT(ssize_t) hist_serialize_b64_estimate(const histogram_t *h);
+//! Return serialized histogram as C string
+API_EXPORT(char *) hist_serialize_json(const histogram_t *h);
+
 //! Compress histogram by squshing together adjacent buckets
 //!
 //! This compression is lossy. mean/quantiles will be affected by compression.
@@ -147,5 +150,6 @@ API_EXPORT(double) hist_approx_sum(const histogram_t *);
 //! \param nq length of quantile array
 //! \param *q_out pre-allocated array where results shall be written to
 API_EXPORT(int) hist_approx_quantile(const histogram_t *, double *q_in, int nq, double *q_out);
+
 
 #endif
