@@ -23,20 +23,6 @@ histL_print(histogram_t *h) {
   }
 }
 
-void
-histL_print_json(histogram_t *h) {
-  int total = hist_bucket_count(h);
-  hist_bucket_t bucket;
-  uint64_t count;
-  printf("{");
-  for(int i=0; i<total; i++){
-    hist_bucket_idx_bucket(h, i, &bucket, &count);
-    printf("\"%de%d\":%llu", bucket.val, bucket.exp-1, count);
-    if(i<total-1) printf(",");
-  }
-  printf("}\n");
-}
-
 char TBUF[1024] = {0};
 char* gettok() {
   int i=0;
@@ -66,7 +52,11 @@ main() {
       histL_print(h);
       break;
     case 'j': //! j : print JSON representation
-      histL_print_json(h);
+      do {
+        char * json = hist_serialize_json(h);
+        printf("%s\n", json);
+        free(json);
+      } while (0);
       break;
     case 'b': //! q : quit
       printf("%d\n", hist_bucket_count(h));
