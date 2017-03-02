@@ -33,6 +33,8 @@
 #define CIRCLLHIST_H
 
 #define DEFAULT_HIST_SIZE 100
+//! Maximal size of hist bucket standard string format (inc. terminator)
+#define HIST_BUCKET_MAX_STRING_SIZE 9
 #define API_EXPORT(type) extern type
 #include <stdlib.h>
 #include <sys/types.h>
@@ -64,6 +66,24 @@ API_EXPORT(double) hist_bucket_to_double_bin_width(hist_bucket_t hb);
 API_EXPORT(hist_bucket_t) double_to_hist_bucket(double d);
 //! Create the bucket that value * 10^(scale) belongs to
 API_EXPORT(hist_bucket_t) int_scale_to_hist_bucket(int64_t value, int scale);
+//! Writes a standardized string representation to buf
+//! Buf must be of size HIST_BUCKET_MAX_STRING_SIZE or larger.
+//! \return of characters of bytes written into the buffer excluding terminator
+//!
+//! Format spec: "sxxetyyy", where
+//! - s = '+' or '-' global sign
+//! - xx -- two digits representing val as decimal integer (in 10 .. 99)
+//! - e = 'e' literal character
+//! - t = '+' or '-' exponent sign
+//! - yyy -- three digits representing exp as decimal integer with leading 0s
+//!
+//! Exception: The zero bucket is represented  as "0"
+//! Exception: Invalid buckets are represented as "NaN"
+//!
+//! Examples:
+//!      1  => '+10e-001'; 12    => '+12e+000';
+//!  -0.23  => '-23e-003'; 23000 => '+23e+003';
+API_EXPORT(int) hist_bucket_to_string(hist_bucket_t hb, char *buf);
 
 ////////////////////////////////////////////////////////////////////////////////
 // Creating and destroying histograms

@@ -931,3 +931,25 @@ hist_compress_mbe(histogram_t *hist, int8_t mbe) {
   }
   return hist_compressed;
 }
+
+extern int
+hist_bucket_to_string(hist_bucket_t hb, char *buf) {
+  // hb_nan would land in 0-bucket if we not catch it fist
+  if(hb.val == (int8_t)0xff) { strcpy(buf, "NaN"); return 3; }
+  if(hb.val < -99 || 99 < hb.val) { strcpy(buf, "NaN"); return 3; }
+  if(-10 < hb.val && hb.val < 10) { strcpy(buf, "0"); return 1; }
+  else {
+    int aval = abs(hb.val);
+    int aexp = abs((int)hb.exp - 1);
+    buf[0] = hb.val >= 0 ? '+' : '-';
+    buf[1] = '0' + aval / 10;
+    buf[2] = '0' + aval % 10;
+    buf[3] = 'e';
+    buf[4] = hb.exp >= 1 ? '+' : '-';
+    buf[5] = '0' + (aexp / 100);
+    buf[6] = '0' + (aexp % 100)/10;
+    buf[7] = '0' + (aexp % 10);
+    buf[8] = '\0';
+    return 8;
+  }
+}
