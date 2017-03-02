@@ -390,6 +390,7 @@ hist_bucket_to_double(hist_bucket_t hb) {
   uint8_t *pidx;
   assert(private_nan != 0);
   pidx = (uint8_t *)&hb.exp;
+  if(hb.val == (int8_t)0xff) return private_nan;
   if(hb.val > 99 || hb.val < -99) return private_nan;
   if(hb.val < 10 && hb.val > -10) return 0.0;
   return (((double)hb.val)/10.0) * power_of_ten[*pidx];
@@ -397,6 +398,7 @@ hist_bucket_to_double(hist_bucket_t hb) {
 
 double
 hist_bucket_to_double_bin_width(hist_bucket_t hb) {
+  if(hb.val == (int8_t)0xff) return private_nan;
   if(hb.val > 99 || hb.val < -99) return private_nan;
   if(hb.val < 10 && hb.val > -10) return 0.0;
   uint8_t *pidx;
@@ -551,6 +553,7 @@ int_scale_to_hist_bucket(int64_t value, int scale) {
   hb.exp = scale;
   return hb;
 }
+
 hist_bucket_t
 double_to_hist_bucket(double d) {
   double d_copy = d;
