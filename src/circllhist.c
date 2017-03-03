@@ -390,6 +390,7 @@ hist_bucket_to_double(hist_bucket_t hb) {
   uint8_t *pidx;
   assert(private_nan != 0);
   pidx = (uint8_t *)&hb.exp;
+  if(hb.val == (int8_t)0xff) return private_nan;
   if(hb.val > 99 || hb.val < -99) return private_nan;
   if(hb.val < 10 && hb.val > -10) return 0.0;
   return (((double)hb.val)/10.0) * power_of_ten[*pidx];
@@ -397,6 +398,7 @@ hist_bucket_to_double(hist_bucket_t hb) {
 
 double
 hist_bucket_to_double_bin_width(hist_bucket_t hb) {
+  if(hb.val == (int8_t)0xff) return private_nan;
   if(hb.val > 99 || hb.val < -99) return private_nan;
   if(hb.val < 10 && hb.val > -10) return 0.0;
   uint8_t *pidx;
@@ -551,6 +553,7 @@ int_scale_to_hist_bucket(int64_t value, int scale) {
   hb.exp = scale;
   return hb;
 }
+
 hist_bucket_t
 double_to_hist_bucket(double d) {
   double d_copy = d;
@@ -927,4 +930,26 @@ hist_compress_mbe(histogram_t *hist, int8_t mbe) {
     }
   }
   return hist_compressed;
+}
+
+extern int
+hist_bucket_to_string(hist_bucket_t hb, char *buf) {
+  // hb_nan would land in 0-bucket if we not catch it fist
+  if(hb.val == (int8_t)0xff) { strcpy(buf, "NaN"); return 3; }
+  if(hb.val < -99 || 99 < hb.val) { strcpy(buf, "NaN"); return 3; }
+  if(-10 < hb.val && hb.val < 10) { strcpy(buf, "0"); return 1; }
+  else {
+    int aval = abs(hb.val);
+    int aexp = abs((int)hb.exp - 1);
+    buf[0] = hb.val >= 0 ? '+' : '-';
+    buf[1] = '0' + aval / 10;
+    buf[2] = '0' + aval % 10;
+    buf[3] = 'e';
+    buf[4] = hb.exp >= 1 ? '+' : '-';
+    buf[5] = '0' + (aexp / 100);
+    buf[6] = '0' + (aexp % 100)/10;
+    buf[7] = '0' + (aexp % 10);
+    buf[8] = '\0';
+    return 8;
+  }
 }

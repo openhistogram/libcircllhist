@@ -2,6 +2,7 @@
 #include <math.h>
 #include <stdbool.h>
 #include <circllhist.h>
+#include <string.h>
 
 typedef histogram_t *(*halloc_func)();
 halloc_func halloc = NULL;
@@ -51,86 +52,136 @@ bool double_equals(double a, double b) {
 }
 void bucket_tests() {
   hist_bucket_t b, o;
+  char hbstr[HIST_BUCKET_MAX_STRING_SIZE] = {0};
 
   b = int_scale_to_hist_bucket(0,0);
   T(is(b.val == 0 && b.exp == 0));
+  hist_bucket_to_string(b, hbstr);
+  T(is(strcmp(hbstr, "0")==0));
 
   b = int_scale_to_hist_bucket(2,0);
   o = double_to_hist_bucket(2);
   T(is(b.val == o.val && b.exp == o.exp));
+  hist_bucket_to_string(b, hbstr);
+  T(is(strcmp(hbstr, "+20e-001")==0));
 
   b = int_scale_to_hist_bucket(1,-9);
   o = double_to_hist_bucket(1e-9);
   T(is(b.val == o.val && b.exp == o.exp));
+  hist_bucket_to_string(b, hbstr);
+  T(is(strcmp(hbstr, "+10e-010")==0));
 
   b = int_scale_to_hist_bucket(1300000000,-9);
   o = double_to_hist_bucket(1.3);
   T(is(b.val == o.val && b.exp == o.exp));
+  hist_bucket_to_string(b, hbstr);
+  T(is(strcmp(hbstr, "+13e-001")==0));
 
   b = int_scale_to_hist_bucket(-2700,-9);
   o = double_to_hist_bucket(-2.7e-6);
   T(is(b.val == o.val && b.exp == o.exp));
+  hist_bucket_to_string(b, hbstr);
+  T(is(strcmp(hbstr, "-27e-007")==0));
 
   b = int_scale_to_hist_bucket(7,-9);
   o = double_to_hist_bucket(7e-9);
   T(is(b.val == o.val && b.exp == o.exp));
+  hist_bucket_to_string(b, hbstr);
+  T(is(strcmp(hbstr, "+70e-010")==0));
 
   b = double_to_hist_bucket(0);
   T(is(b.val == 0 && b.exp == 0));
+  hist_bucket_to_string(b, hbstr);
+  T(is(strcmp(hbstr, "0")==0));
 
   b = double_to_hist_bucket(9.9999e-129);
   T(is(b.val == 0 && b.exp == 0));
+  hist_bucket_to_string(b, hbstr);
+  T(is(strcmp(hbstr, "0")==0));
 
   b = double_to_hist_bucket(1e-128);
   T(is(b.val == 10 && b.exp == -128));
+  hist_bucket_to_string(b, hbstr);
+  T(is(strcmp(hbstr, "+10e-129")==0));
 
   b = double_to_hist_bucket(1.00001e-128);
   T(is(b.val == 10 && b.exp == -128));
+  hist_bucket_to_string(b, hbstr);
+  T(is(strcmp(hbstr, "+10e-129")==0));
 
   b = double_to_hist_bucket(1.09999e-128);
   T(is(b.val == 10 && b.exp == -128));
+  hist_bucket_to_string(b, hbstr);
+  T(is(strcmp(hbstr, "+10e-129")==0));
 
   b = double_to_hist_bucket(1.1e-128);
   T(is(b.val == 11 && b.exp == -128));
+  hist_bucket_to_string(b, hbstr);
+  T(is(strcmp(hbstr, "+11e-129")==0));
 
   b = double_to_hist_bucket(1e127);
   T(is(b.val == 10 && b.exp == 127));
+  hist_bucket_to_string(b, hbstr);
+  T(is(strcmp(hbstr, "+10e+126")==0));
 
   b = double_to_hist_bucket(9.999e127);
   T(is(b.val == 99 && b.exp == 127));
+  hist_bucket_to_string(b, hbstr);
+  T(is(strcmp(hbstr, "+99e+126")==0));
 
   b = double_to_hist_bucket(1e128);
   T(is(b.val == -1 && b.exp == 0));
+  hist_bucket_to_string(b, hbstr);
+  T(is(strcmp(hbstr, "NaN")==0));
 
   // negative range
 
   b = double_to_hist_bucket(-9.9999e-129);
   T(is(b.val == 0 && b.exp == 0));
+  hist_bucket_to_string(b, hbstr);
+  T(is(strcmp(hbstr, "0")==0));
 
   b = double_to_hist_bucket(-1e-128);
   T(is(b.val == -10 && b.exp == -128));
+  hist_bucket_to_string(b, hbstr);
+  T(is(strcmp(hbstr, "-10e-129")==0));
 
   b = double_to_hist_bucket(-1.00001e-128);
   T(is(b.val == -10 && b.exp == -128));
+  hist_bucket_to_string(b, hbstr);
+  T(is(strcmp(hbstr, "-10e-129")==0));
 
   b = double_to_hist_bucket(-1.09999e-128);
   T(is(b.val == -10 && b.exp == -128));
+  hist_bucket_to_string(b, hbstr);
+  T(is(strcmp(hbstr, "-10e-129")==0));
 
   b = double_to_hist_bucket(-1.1e-128);
   T(is(b.val == -11 && b.exp == -128));
+  hist_bucket_to_string(b, hbstr);
+  T(is(strcmp(hbstr, "-11e-129")==0));
 
   b = double_to_hist_bucket(-1e127);
   T(is(b.val == -10 && b.exp == 127));
+  hist_bucket_to_string(b, hbstr);
+  T(is(strcmp(hbstr, "-10e+126")==0));
 
   b = double_to_hist_bucket(-9.999e127);
   T(is(b.val == -99 && b.exp == 127));
+  hist_bucket_to_string(b, hbstr);
+  T(is(strcmp(hbstr, "-99e+126")==0));
 
   b = double_to_hist_bucket(-1e128);
   T(is(b.val == -1 && b.exp == 0));
+  hist_bucket_to_string(b, hbstr);
+  T(is(strcmp(hbstr, "NaN")==0));
 
   b = double_to_hist_bucket(9.999e127);
   T(is(b.val == 99 && b.exp == 127));
+  hist_bucket_to_string(b, hbstr);
+  T(is(strcmp(hbstr, "+99e+126")==0));
 }
+
 void test1(double val, double b, double w) {
   double out, interval;
   hist_bucket_t in;
