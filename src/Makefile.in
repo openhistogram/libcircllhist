@@ -110,7 +110,7 @@ test/histogram_test: test/histogram_test.c $(LIBCIRCLLHIST)
 test/histogram_perf: test/histogram_perf.c $(LIBCIRCLLHIST)
 	$(Q)$(CC) -I. $(CPPFLAGS) $(CFLAGS) -L. $(LDFLAGS) -I. -o $@ test/histogram_perf.c -lcircllhist -lm
 
-$(LUA_FFI): 
+$(LUA_FFI):	circllhist.h
 	./generateLuaFiles.sh . $@
 
 .c.lo:
