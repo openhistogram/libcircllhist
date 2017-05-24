@@ -364,6 +364,16 @@ ssize_t hist_deserialize_b64(histogram_t *h, const void *b64_string, ssize_t b64
     return bytes_read;
 }
 
+static inline int
+hist_bucket_isnan(hist_bucket_t hb) {
+  int8_t aval = abs(hb.val);
+  if (99 <  aval) return 1; // in [100... ]: nan
+  if ( 9 <  aval) return 0; // in [10 - 99]: valid range
+  if ( 0 <  aval) return 1; // in [1  - 9 ]: nan
+  if ( 0 == aval) return 0; // in [0]:       zero bucket
+  return 0;
+}
+
 static inline
 int hist_bucket_cmp(hist_bucket_t h1, hist_bucket_t h2) {
   // checks if h1 < h2 on the real axis.
@@ -475,7 +485,7 @@ hist_approx_quantile(const histogram_t *hist, double *q_in, int nq, double *q_ou
   /* Sum up all samples from all the bins */
   for (i_b=0;i_b<hist->used;i_b++) {
     /* ignore NaN */
-    if(hist->bvs[i_b].bucket.val < -99 || hist->bvs[i_b].bucket.val > 99)
+    if(hist_bucket_isnan(hist->bvs[i_b].bucket))
       continue;
     total_cnt += (double)hist->bvs[i_b].count;
   }
@@ -500,7 +510,7 @@ hist_approx_quantile(const histogram_t *hist, double *q_in, int nq, double *q_ou
   /* Find the least bin (first) */
   for(i_b=0;i_b<hist->used;i_b++) {
     /* We don't include NaNs */
-    if(hist->bvs[i_b].bucket.val < -99 || hist->bvs[i_b].bucket.val > 99)
+    if(hist_bucket_isnan(hist->bvs[i_b].bucket))
       continue;
     TRACK_VARS(i_b);
     break;
