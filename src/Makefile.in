@@ -148,7 +148,7 @@ tests: test/histogram_test test/histogram_perf $(LUA_FFI)
 
 clean:
 	rm -f *.lo *.o $(TARGETS)
-	rm -f $(LIBCIRCLLHIST)
+	rm -f $(LIBCIRCLLHIST) $(LIBCIRCLLHIST_V)
 	rm -f histogram_test
 	rm -f histogram_perl
 	rm -f $(LUA_FFI)
@@ -158,5 +158,4 @@ Makefile.dep:
 
 include Makefile.dep
 
-distclean:	clean 
-
+distclean:	clean
