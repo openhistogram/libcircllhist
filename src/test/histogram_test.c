@@ -331,6 +331,17 @@ int main() {
     double qout3[] = { 1.1 };
     T(q_test(s3, 2, qin3, 1, qout3));
 
+    double s4[] = { 1.0, 1e200 }; // out of range -> nan bucket
+    double qin4[] = { 0, 1 };
+    double qout4[] = { 1.0, 1.1 };
+    T(q_test(s4, 2, qin4, 2, qout4));
+    T(mean_test(s4, 2, 1.05));
+
+    double s5[] = { 1e200, 1e200, 1e200,  0, 0, 1e-20, 1e-20, 1e-20, 1e-10};
+    double qin5[] = { 0, 1 };
+    double qout5[] = { 0, 1.1e-10 };
+    T(q_test(s5, 2, qin5, 2, qout5));
+
     T(serialize_test());
 
     halloc = hist_fast_alloc;

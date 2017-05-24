@@ -364,13 +364,23 @@ ssize_t hist_deserialize_b64(histogram_t *h, const void *b64_string, ssize_t b64
     return bytes_read;
 }
 
+static inline int
+hist_bucket_isnan(hist_bucket_t hb) {
+  int8_t aval = abs(hb.val);
+  if (99 <  aval) return 1; // in [100... ]: nan
+  if ( 9 <  aval) return 0; // in [10 - 99]: valid range
+  if ( 0 <  aval) return 1; // in [1  - 9 ]: nan
+  if ( 0 == aval) return 0; // in [0]:       zero bucket
+  return 0;
+}
+
 static inline
 int hist_bucket_cmp(hist_bucket_t h1, hist_bucket_t h2) {
   // checks if h1 < h2 on the real axis.
   if(*(uint16_t *)&h1 == *(uint16_t *)&h2) return 0;
   /* place NaNs at the beginning always */
-  if(h1.val == (int8_t)0xff) return 1;
-  if(h2.val == (int8_t)0xff) return -1;
+  if(hist_bucket_isnan(h1)) return 1;
+  if(hist_bucket_isnan(h2)) return -1;
   /* zero values need special treatment */
   if(h1.val == 0) return (h2.val > 0) ? 1 : -1;
   if(h2.val == 0) return (h1.val < 0) ? 1 : -1;
@@ -389,18 +399,15 @@ double
 hist_bucket_to_double(hist_bucket_t hb) {
   uint8_t *pidx;
   assert(private_nan != 0);
+  if(hist_bucket_isnan(hb)) return private_nan;
+  if(hb.val == 0) return 0.0;
   pidx = (uint8_t *)&hb.exp;
-  if(hb.val == (int8_t)0xff) return private_nan;
-  if(hb.val > 99 || hb.val < -99) return private_nan;
-  if(hb.val < 10 && hb.val > -10) return 0.0;
   return (((double)hb.val)/10.0) * power_of_ten[*pidx];
 }
 
 double
 hist_bucket_to_double_bin_width(hist_bucket_t hb) {
-  if(hb.val == (int8_t)0xff) return private_nan;
-  if(hb.val > 99 || hb.val < -99) return private_nan;
-  if(hb.val < 10 && hb.val > -10) return 0.0;
+  if(hist_bucket_isnan(hb)) return private_nan;
   uint8_t *pidx;
   pidx = (uint8_t *)&hb.exp;
   return power_of_ten[*pidx]/10.0;
@@ -409,7 +416,7 @@ hist_bucket_to_double_bin_width(hist_bucket_t hb) {
 double
 hist_bucket_midpoint(hist_bucket_t in) {
   double out, interval;
-  if(in.val > 99 || in.val < -99) return private_nan;
+  if(hist_bucket_isnan(in)) return private_nan;
   out = hist_bucket_to_double(in);
   if(out == 0) return 0;
   interval = hist_bucket_to_double_bin_width(in);
@@ -422,7 +429,7 @@ hist_bucket_midpoint(hist_bucket_t in) {
 static double
 hist_bucket_left(hist_bucket_t in) {
   double out, interval;
-  if(in.val > 99 || in.val < -99) return private_nan;
+  if(hist_bucket_isnan(in)) return private_nan;
   out = hist_bucket_to_double(in);
   if(out == 0) return 0;
   if(out > 0) return out;
@@ -437,7 +444,7 @@ hist_approx_mean(const histogram_t *hist) {
   double divisor = 0.0;
   double sum = 0.0;
   for(i=0; i<hist->used; i++) {
-    if(hist->bvs[i].bucket.val > 99 || hist->bvs[i].bucket.val < -99) continue;
+    if(hist_bucket_isnan(hist->bvs[i].bucket)) continue;
     double midpoint = hist_bucket_midpoint(hist->bvs[i].bucket);
     double cardinality = (double)hist->bvs[i].count;
     divisor += cardinality;
@@ -452,7 +459,7 @@ hist_approx_sum(const histogram_t *hist) {
   int i;
   double sum = 0.0;
   for(i=0; i<hist->used; i++) {
-    if(hist->bvs[i].bucket.val > 99 || hist->bvs[i].bucket.val < -99) continue;
+    if(hist_bucket_isnan(hist->bvs[i].bucket)) continue;
     double value = hist_bucket_midpoint(hist->bvs[i].bucket);
     double cardinality = (double)hist->bvs[i].count;
     sum += value * cardinality;
@@ -475,7 +482,7 @@ hist_approx_quantile(const histogram_t *hist, double *q_in, int nq, double *q_ou
   /* Sum up all samples from all the bins */
   for (i_b=0;i_b<hist->used;i_b++) {
     /* ignore NaN */
-    if(hist->bvs[i_b].bucket.val < -99 || hist->bvs[i_b].bucket.val > 99)
+    if(hist_bucket_isnan(hist->bvs[i_b].bucket))
       continue;
     total_cnt += (double)hist->bvs[i_b].count;
   }
@@ -500,7 +507,7 @@ hist_approx_quantile(const histogram_t *hist, double *q_in, int nq, double *q_ou
   /* Find the least bin (first) */
   for(i_b=0;i_b<hist->used;i_b++) {
     /* We don't include NaNs */
-    if(hist->bvs[i_b].bucket.val < -99 || hist->bvs[i_b].bucket.val > 99)
+    if(hist_bucket_isnan(hist->bvs[i_b].bucket))
       continue;
     TRACK_VARS(i_b);
     break;
@@ -934,10 +941,8 @@ hist_compress_mbe(histogram_t *hist, int8_t mbe) {
 
 extern int
 hist_bucket_to_string(hist_bucket_t hb, char *buf) {
-  // hb_nan would land in 0-bucket if we not catch it fist
-  if(hb.val == (int8_t)0xff) { strcpy(buf, "NaN"); return 3; }
-  if(hb.val < -99 || 99 < hb.val) { strcpy(buf, "NaN"); return 3; }
-  if(-10 < hb.val && hb.val < 10) { strcpy(buf, "0"); return 1; }
+  if(hist_bucket_isnan(hb)) { strcpy(buf, "NaN"); return 3; }
+  if(hb.val == 0) { strcpy(buf, "0"); return 1; }
   else {
     int aval = abs(hb.val);
     int aexp = abs((int)hb.exp - 1);
