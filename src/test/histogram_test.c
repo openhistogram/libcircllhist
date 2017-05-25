@@ -340,7 +340,12 @@ int main() {
     double s5[] = { 1e200, 1e200, 1e200,  0, 0, 1e-20, 1e-20, 1e-20, 1e-10};
     double qin5[] = { 0, 1 };
     double qout5[] = { 0, 1.1e-10 };
-    T(q_test(s5, 2, qin5, 2, qout5));
+    T(q_test(s5, 10, qin5, 2, qout5));
+
+    double s6[] = { 0, 1 };
+    double qin6[] = { 0, 0.1 };
+    double qout6[] = { 0, 0 };
+    T(q_test(s6, 2, qin6, 2, qout6));
 
     T(serialize_test());
 

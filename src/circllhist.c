@@ -408,6 +408,7 @@ hist_bucket_to_double(hist_bucket_t hb) {
 double
 hist_bucket_to_double_bin_width(hist_bucket_t hb) {
   if(hist_bucket_isnan(hb)) return private_nan;
+  if(hb.val == 0) return 0;
   uint8_t *pidx;
   pidx = (uint8_t *)&hb.exp;
   return power_of_ten[*pidx]/10.0;
@@ -417,8 +418,8 @@ double
 hist_bucket_midpoint(hist_bucket_t in) {
   double out, interval;
   if(hist_bucket_isnan(in)) return private_nan;
+  if(in.val == 0) return 0;
   out = hist_bucket_to_double(in);
-  if(out == 0) return 0;
   interval = hist_bucket_to_double_bin_width(in);
   if(out < 0) interval *= -1.0;
   return out + interval/2.0;
@@ -430,8 +431,8 @@ static double
 hist_bucket_left(hist_bucket_t in) {
   double out, interval;
   if(hist_bucket_isnan(in)) return private_nan;
+  if(in.val == 0) return 0;
   out = hist_bucket_to_double(in);
-  if(out == 0) return 0;
   if(out > 0) return out;
   /* out < 0 */
   interval = hist_bucket_to_double_bin_width(in);
