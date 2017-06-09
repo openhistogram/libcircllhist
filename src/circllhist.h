@@ -130,6 +130,8 @@ API_EXPORT(int) hist_bucket_idx(const histogram_t *hist, int idx, double *v, uin
 API_EXPORT(int) hist_bucket_idx_bucket(const histogram_t *hist, int idx, hist_bucket_t *b, uint64_t *c);
 //! Accumulate bins from each of cnt histograms in src onto tgt
 API_EXPORT(int) hist_accumulate(histogram_t *tgt, const histogram_t * const *src, int cnt);
+//! Subtract bins from each of cnt histograms in src from tgt, return -1 on underrun error
+API_EXPORT(int) hist_subtract(histogram_t *tgt, const histogram_t * const *src, int cnt);
 //! Clear data fast. Keeps buckets allocated.
 API_EXPORT(void) hist_clear(histogram_t *hist);
 //! Insert a value into a histogram value = val * 10^(scale)
