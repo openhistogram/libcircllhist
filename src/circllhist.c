@@ -825,6 +825,42 @@ internal_bucket_accum(histogram_t *tgt, int tgtidx,
   tgt->bvs[tgtidx].count = newval;
 }
 
+int
+hist_subtract(histogram_t *tgt, const histogram_t * const *hist, int cnt) {
+  int i, tgt_idx, src_idx;
+  int rv = 0;
+  for(i=0;i<cnt;i++) {
+    tgt_idx = src_idx = 0;
+    while(tgt_idx < tgt->used && src_idx < hist[i]->used) {
+      int cmp = hist_bucket_cmp(tgt->bvs[tgt_idx].bucket, hist[i]->bvs[src_idx].bucket);
+      /* if the match, attempt to subtract, and move tgt && src fwd. */
+      if(cmp == 0) {
+        if(tgt->bvs[tgt_idx].count < hist[i]->bvs[src_idx].count) {
+          tgt->bvs[tgt_idx].count = 0;
+          rv = -1;
+        } else {
+          tgt->bvs[tgt_idx].count = tgt->bvs[tgt_idx].count - hist[i]->bvs[src_idx].count;
+        }
+        tgt_idx++;
+        src_idx++;
+      }
+      else if(cmp > 0) {
+        tgt_idx++;
+      }
+      else {
+        if(hist[i]->bvs[src_idx].count > 0) rv = -1;
+        src_idx++;
+      }
+    }
+    /* run for the rest of the source so see if we have stuff we can't subtract */
+    while(src_idx < hist[i]->used) {
+      if(hist[i]->bvs[src_idx].count > 0) rv = -1;
+      src_idx++;
+    }
+  }
+  return rv;
+}
+
 static int
 hist_needed_merge_size(histogram_t **hist, int cnt) {
   return hist_needed_merge_size_fc(hist, cnt, NULL, NULL);

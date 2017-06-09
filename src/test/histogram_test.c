@@ -1,7 +1,8 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <math.h>
 #include <stdbool.h>
-#include <circllhist.h>
+#include "circllhist.h"
 #include <string.h>
 
 typedef histogram_t *(*halloc_func)();
@@ -228,6 +229,29 @@ void q_test(double *vals, int nvals, double *in, int nin, double *expected) {
   hist_free(h);
 }
 
+void accum_sub_test() {
+  int i, j, samples = 0;
+  histogram_t *tgt;
+  histogram_t *t[10];
+  for(i=0;i<10;i++) {
+    t[i] = hist_alloc();
+    for(j=0; j<100; j++) {
+      hist_insert(t[i], (lrand48() % 100) + 10, 1);
+      samples++;
+    }
+  }
+  tgt = hist_alloc();
+  hist_accumulate(tgt, (const struct histogram_t * const*)t, 10);
+  isf(samples == hist_sample_count(tgt), "should have %d samples", samples);
+  int rv = hist_subtract(tgt, t, 9);
+  if(rv < 0) notokf("hist_subtract underrun: %d", rv);
+  else ok();
+  if(hist_sample_count(tgt) != hist_sample_count(t[9]))
+    notokf("subtract resulted in wrong sample count: %d != %d",
+            hist_sample_count(tgt), hist_sample_count(t[9]));
+  else ok();
+}
+
 void serialize_test() {
   int i,j,failed=0;
   histogram_t *in, *out;
@@ -298,6 +322,7 @@ void compress_test() {
 }
 
 int main() {
+  srand48(time(NULL));
   bucket_tests();
 
   T(test1(43.3, 43, 1));
@@ -354,6 +379,7 @@ int main() {
 
   T(sample_count_roll());
 
+  T(accum_sub_test());
   compress_test();
 
   printf("%d..%d\n", 1, tcount-1);
