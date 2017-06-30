@@ -99,6 +99,8 @@ API_EXPORT(histogram_t *) hist_alloc_nbins(int nbins);
 API_EXPORT(histogram_t *) hist_fast_alloc();
 //! Create a fast-histogram with preallocated bins
 API_EXPORT(histogram_t *) hist_fast_alloc_nbins(int nbins);
+//! Create an exact copy of other
+API_EXPORT(histogram_t *) hist_clone(histogram_t *other);
 //! Free a (fast-) histogram
 API_EXPORT(void) hist_free(histogram_t *hist);
 

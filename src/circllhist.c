@@ -937,6 +937,32 @@ hist_fast_alloc_nbins(int nbins) {
   return tgt;
 }
 
+histogram_t *
+hist_clone(histogram_t *other)
+{
+  histogram_t *tgt;
+  int i = 0;
+  if (other->fast) {
+    tgt = hist_fast_alloc_nbins(other->allocd);
+    struct histogram_fast *f = (struct histogram_fast *)tgt;
+    struct histogram_fast *of = (struct histogram_fast *)other;
+    for(i=0;i<256;i++) {
+      if (of->faster[i]) {
+        f->faster[i] = calloc(256, sizeof(uint16_t));
+        memcpy(f->faster[i], of->faster[i], 256 * sizeof(uint16_t));
+      }
+    }
+  }
+  else {
+    tgt = hist_alloc_nbins(other->allocd);
+  }
+  for (i=0;i<other->used;i++) {
+    memcpy(&tgt->bvs[i], &other->bvs[i], sizeof(struct hist_bv_pair));
+  }
+  tgt->used = other->used;
+  return tgt;
+}
+
 void
 hist_free(histogram_t *hist) {
   if(hist == NULL) return;
