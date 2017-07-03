@@ -940,7 +940,7 @@ hist_fast_alloc_nbins(int nbins) {
 histogram_t *
 hist_clone(histogram_t *other)
 {
-  histogram_t *tgt;
+  histogram_t *tgt = NULL;
   int i = 0;
   if (other->fast) {
     tgt = hist_fast_alloc_nbins(other->allocd);
@@ -956,9 +956,7 @@ hist_clone(histogram_t *other)
   else {
     tgt = hist_alloc_nbins(other->allocd);
   }
-  for (i=0;i<other->used;i++) {
-    memcpy(&tgt->bvs[i], &other->bvs[i], sizeof(struct hist_bv_pair));
-  }
+  memcpy(tgt->bvs, other->bvs, other->used * sizeof(struct hist_bv_pair));
   tgt->used = other->used;
   return tgt;
 }
