@@ -1,9 +1,12 @@
-#include <stdio.h>
+#define _XOPEN_SOURCE
 #include <stdlib.h>
+#include <stdio.h>
 #include <math.h>
 #include <stdbool.h>
 #include "circllhist.h"
 #include <string.h>
+#include <inttypes.h>
+#include <time.h>
 
 typedef histogram_t *(*halloc_func)();
 halloc_func halloc = NULL;
@@ -241,13 +244,13 @@ void accum_sub_test() {
     }
   }
   tgt = hist_alloc();
-  hist_accumulate(tgt, (const struct histogram_t * const*)t, 10);
+  hist_accumulate(tgt, (const histogram_t * const*)t, 10);
   isf(samples == hist_sample_count(tgt), "should have %d samples", samples);
-  int rv = hist_subtract(tgt, t, 9);
+  int rv = hist_subtract(tgt, (const histogram_t * const*)t, 9);
   if(rv < 0) notokf("hist_subtract underrun: %d", rv);
   else ok();
   if(hist_sample_count(tgt) != hist_sample_count(t[9]))
-    notokf("subtract resulted in wrong sample count: %d != %d",
+    notokf("subtract resulted in wrong sample count: %" PRIu64 " != %" PRIu64 "",
             hist_sample_count(tgt), hist_sample_count(t[9]));
   else ok();
 }
@@ -321,6 +324,36 @@ void compress_test() {
   T(is(hist_bucket_count(h) == 1));
 }
 
+void clone_test() {
+  double s[] = { 0,1,2,3,10,11,12,21,22,23,99,100,110,120,210,220 };
+  int i, j;
+  // mbe = 0:    0 1 2 3 10 11 12 21 22 23 90 100 110 120 210 220 => 16 buckets
+  // mbe = 1:    0 0 0 0 10 10 10 20 20 20 90 100 110 120 210 220 => 9 buckets
+  // mbe = 2:    0 0 0 0 0  0  0  0  0  0  0  100 100 100 200 200 => 3 buckets
+  histogram_t *h = build(s, sizeof(s)/sizeof(double));
+  histogram_t *clone = hist_clone(h);
+
+  if(hist_bucket_count(clone) <= hist_bucket_count(h))
+    okf("%s", "clone equal or smaller");
+  else notokf("%s", "clone bigger");
+  if(hist_bucket_count(clone) == 0) notokf("%s", "cloned to zero");
+  for(j=0, i=0; i<hist_bucket_count(h); i++) {
+    hist_bucket_t ib, ob;
+    uint64_t ic, oc;
+    hist_bucket_idx_bucket(h, i, &ib, &ic);
+    if(ic == 0) continue;
+    hist_bucket_idx_bucket(clone, j++, &ob, &oc);
+    if(!(ib.val == ob.val && ib.exp == ob.exp && ic == oc))
+      failed = 1;
+  }
+  if(failed) notokf("%s", "histograms match");
+  else okf("%s %d buckets (%d empty)", "histograms match", j, i-j);
+
+  hist_free(h);
+  hist_free(clone);
+}
+
+
 int main() {
   srand48(time(NULL));
   bucket_tests();
@@ -373,6 +406,8 @@ int main() {
     T(q_test(s6, 2, qin6, 2, qout6));
 
     T(serialize_test());
+
+    T(clone_test());
 
     halloc = hist_fast_alloc;
   }
