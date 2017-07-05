@@ -1,4 +1,6 @@
-#define _XOPEN_SOURCE
+#if defined(linux) || defined(__linux) || defined(__linux__)
+#  define _XOPEN_SOURCE
+#endif
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
