@@ -214,21 +214,23 @@ ssize_t
 hist_serialize(const histogram_t *h, void *buff, ssize_t len) {
   ssize_t written = 0;
   uint8_t *cp = buff;
-  uint16_t nlen;
+  uint16_t nlen = 0;
   int i;
 
   if(len < 2) return -1;
-  nlen = htons(h ? h->used : 0);
-  memcpy(cp, &nlen, sizeof(nlen));
   ADVANCE(written, 2);
   for(i=0;h && i<h->used;i++) {
     ssize_t incr_written;
     if(h->bvs[i].count) {
       incr_written = bv_write(h, i, cp, len);
       if(incr_written < 0) return -1;
+      nlen++;
       ADVANCE(written, incr_written);
     }
   }
+  nlen = htons(nlen);
+  memcpy(buff, &nlen, sizeof(nlen));
+
   return written;
 }
 
