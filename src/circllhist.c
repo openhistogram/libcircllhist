@@ -294,9 +294,6 @@ hist_deserialize(histogram_t *h, const void *buff, ssize_t len) {
   if(!h->bvs) goto bad_read; /* yeah, yeah... bad label name */
   while(len > 0 && cnt > 0) {
     ssize_t incr_read = 0;
-    if(h->used >= h->allocd) {
-      return -1;
-    }
     incr_read = bv_read(h, h->used, cp, len);
     if(incr_read < 0) goto bad_read;
     ADVANCE(bytes_read, incr_read);
