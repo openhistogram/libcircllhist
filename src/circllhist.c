@@ -904,7 +904,7 @@ hist_clear(histogram_t *hist) {
 }
 
 histogram_t *
-hist_alloc() {
+hist_alloc(void) {
   return hist_alloc_nbins(0);
 }
 
@@ -920,7 +920,7 @@ hist_alloc_nbins(int nbins) {
 }
 
 histogram_t *
-hist_fast_alloc() {
+hist_fast_alloc(void) {
   return hist_fast_alloc_nbins(0);
 }
 

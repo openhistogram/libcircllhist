@@ -89,14 +89,14 @@ API_EXPORT(int) hist_bucket_to_string(hist_bucket_t hb, char *buf);
 // Creating and destroying histograms
 
 //! Create a new histogram
-API_EXPORT(histogram_t *) hist_alloc();
+API_EXPORT(histogram_t *) hist_alloc(void);
 //! Create a new histogram with preallocated bins
 API_EXPORT(histogram_t *) hist_alloc_nbins(int nbins);
 //! Create a fast-histogram
 /*! Fast allocations consume 2kb + N * 512b more memory
  *  where N is the number of used exponents.  It allows for O(1) increments for
  *  prexisting keys */
-API_EXPORT(histogram_t *) hist_fast_alloc();
+API_EXPORT(histogram_t *) hist_fast_alloc(void);
 //! Create a fast-histogram with preallocated bins
 API_EXPORT(histogram_t *) hist_fast_alloc_nbins(int nbins);
 //! Create an exact copy of other
