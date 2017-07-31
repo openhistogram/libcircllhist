@@ -331,7 +331,8 @@ copy_of_mtev_b64_decode(const char *src, size_t src_len,
       if(ib == 0) break;
       if(ib == 1 || ib == 2) ob = 1;
       else ob = 2;
-      ib = 3;
+      while (ib < 3)
+        in[ib++] = '\0';
     }
     in[ib++] = ch;
     if(ib == 4) {
@@ -496,7 +497,6 @@ hist_approx_quantile(const histogram_t *hist, double *q_in, int nq, double *q_ou
   }
 
 
-  i_b = 0;
 #define TRACK_VARS(idx) do { \
   bucket_width = hist_bucket_to_double_bin_width(hist->bvs[idx].bucket); \
   bucket_left = hist_bucket_left(hist->bvs[idx].bucket); \
@@ -877,6 +877,7 @@ hist_accumulate(histogram_t *tgt, const histogram_t* const *src, int cnt) {
   tgtneeds = hist_needed_merge_size(inclusive_src, cnt+1);
   tgt->allocd = tgtneeds;
   tgt->used = 0;
+  if (! tgt->allocd) tgt->allocd = 1;
   tgt->bvs = calloc(tgt->allocd, sizeof(*tgt->bvs));
   hist_needed_merge_size_fc(inclusive_src, cnt+1, internal_bucket_accum, tgt);
   if(oldtgtbuff) free(oldtgtbuff);
@@ -926,14 +927,14 @@ hist_fast_alloc(void) {
 
 histogram_t *
 hist_fast_alloc_nbins(int nbins) {
-  histogram_t *tgt;
+  struct histogram_fast *tgt;
   if(nbins < 1) nbins = DEFAULT_HIST_SIZE;
   if(nbins > MAX_HIST_BINS) nbins = MAX_HIST_BINS;
   tgt = calloc(1, sizeof(struct histogram_fast));
-  tgt->allocd = nbins;
-  tgt->bvs = calloc(tgt->allocd, sizeof(*tgt->bvs));
-  tgt->fast = 1;
-  return tgt;
+  tgt->internal.allocd = nbins;
+  tgt->internal.bvs = calloc(tgt->internal.allocd, sizeof(*tgt->internal.bvs));
+  tgt->internal.fast = 1;
+  return &tgt->internal;
 }
 
 histogram_t *
