@@ -272,8 +272,10 @@ hist_serialize_b64(const histogram_t *h, char *b64_serialized_histo_buff, ssize_
   ssize_t serialize_buff_length = hist_serialize_estimate(h);
   void *serialize_buff = alloca(serialize_buff_length);
   ssize_t serialized_length = hist_serialize(h, serialize_buff, serialize_buff_length);
-
-  return copy_of_mtev_b64_encode(serialize_buff, serialized_length, b64_serialized_histo_buff, buff_len);
+  if (serialized_length > 0) {
+    return copy_of_mtev_b64_encode(serialize_buff, serialized_length, b64_serialized_histo_buff, buff_len);
+  }
+  return serialized_length;
 }
 
 ssize_t
