@@ -318,16 +318,23 @@ void compress_test() {
   // mbe = 0:    0 1 2 3 10 11 12 21 22 23 90 100 110 120 210 220 => 16 buckets
   // mbe = 1:    0 0 0 0 10 10 10 20 20 20 90 100 110 120 210 220 => 9 buckets
   // mbe = 2:    0 0 0 0 0  0  0  0  0  0  0  100 100 100 200 200 => 3 buckets
+  histogram_t *tofree;
   histogram_t *h = build(s, sizeof(s)/sizeof(double));
+  tofree = h; 
   h = hist_compress_mbe(h, 0);
+  hist_free(tofree);
   T(is(hist_bucket_count(h) == 16));
+  tofree = h;
   h = hist_compress_mbe(h, 1);
+  hist_free(tofree);
   T(is(hist_bucket_count(h) == 9));
-  hist_free(h);
+  tofree = h;
   h = hist_compress_mbe(h, 2);
+  hist_free(tofree);
   T(is(hist_bucket_count(h) == 3));
-  hist_free(h);
+  tofree = h;
   h = hist_compress_mbe(h, 3);
+  hist_free(tofree);
   T(is(hist_bucket_count(h) == 1));
   
   hist_free(h);
