@@ -327,7 +327,7 @@ void compress_test() {
   h = hist_compress_mbe(h, 3);
   T(is(hist_bucket_count(h) == 1));
   
-  hist_free(h)
+  hist_free(h);
 }
 
 void clone_test() {
