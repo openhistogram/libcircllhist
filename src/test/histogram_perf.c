@@ -78,8 +78,11 @@ int main() {
       gettimeofday(&finish, NULL);
       double elapsed = finish.tv_sec - start.tv_sec;
       elapsed += (finish.tv_usec/1000000.0) - (start.tv_usec/1000000.0);
-      printf("ops: %ld, time: %gs, time-per-op: %0.2fns\n",
+      if(cnt != 0)
+        printf("ops: %ld, time: %gs, time-per-op: %0.2fns\n",
              cnt, elapsed, (elapsed / (double)cnt) * 1000000000.0);
+      else 
+        printf("cannot calculate benchmark, no work done!\n");
       hist_free(hist);
       free(vals);
 }
