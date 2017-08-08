@@ -104,8 +104,7 @@ int main() {
         printf("ops: %ld, time: %gs, time-per-op: %0.2fns\n",
              cnt, elapsed, (elapsed / (double)cnt) * 1000000000.0);
       else
-        printf("ops: %ld, time: %gs, time-per-op: %0.2fns\n",
-             cnt, elapsed, (elapsed / 1) * 1000000000.0);
+        printf("cannot calculate benchmark, no work done!\n);
       hist_free(hist);
       free(vals);
 }
