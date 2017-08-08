@@ -232,6 +232,7 @@ void q_test(double *vals, int nvals, double *in, int nin, double *expected) {
     ok();
   }
   hist_free(h);
+  hist_free(out);
 }
 
 void accum_sub_test() {
@@ -299,6 +300,7 @@ void serialize_test() {
 
   hist_free(in);
   hist_free(out);
+  hist_free(serial);
 }
 
 void sample_count_roll() {
@@ -324,6 +326,8 @@ void compress_test() {
   T(is(hist_bucket_count(h) == 3));
   h = hist_compress_mbe(h, 3);
   T(is(hist_bucket_count(h) == 1));
+  
+  hist_free(h)
 }
 
 void clone_test() {
