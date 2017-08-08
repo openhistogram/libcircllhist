@@ -323,6 +323,7 @@ void compress_test() {
   T(is(hist_bucket_count(h) == 16));
   h = hist_compress_mbe(h, 1);
   T(is(hist_bucket_count(h) == 9));
+  hist_free(h);
   h = hist_compress_mbe(h, 2);
   T(is(hist_bucket_count(h) == 3));
   hist_free(h);
