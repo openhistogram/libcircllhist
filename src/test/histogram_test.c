@@ -232,7 +232,7 @@ void q_test(double *vals, int nvals, double *in, int nin, double *expected) {
     ok();
   }
   hist_free(h);
-  hist_free(out);
+  free(out);
 }
 
 void accum_sub_test() {
@@ -300,7 +300,7 @@ void serialize_test() {
 
   hist_free(in);
   hist_free(out);
-  hist_free(serial);
+  free(serial);
 }
 
 void sample_count_roll() {
