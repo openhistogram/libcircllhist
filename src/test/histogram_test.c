@@ -226,6 +226,7 @@ void q_test(double *vals, int nvals, double *in, int nin, double *expected) {
     for(i=0;i<nin;i++) {
       if(!double_equals(out[i], expected[i])) {
         notokf("q(%f) -> %g != %g", in[i], out[i], expected[i]);
+        free(out);
         return;
       }
     }
@@ -324,6 +325,7 @@ void compress_test() {
   T(is(hist_bucket_count(h) == 9));
   h = hist_compress_mbe(h, 2);
   T(is(hist_bucket_count(h) == 3));
+  hist_free(h);
   h = hist_compress_mbe(h, 3);
   T(is(hist_bucket_count(h) == 1));
   
