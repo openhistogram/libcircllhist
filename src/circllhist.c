@@ -46,6 +46,12 @@
 
 #include "circllhist.h"
 
+hist_allocator_t default_allocator = {
+  .malloc = malloc,
+  .calloc = calloc,
+  .free = free
+};
+
 static union {
    uint64_t  private_nan_internal_rep;
    double    private_nan_double_rep;
@@ -109,6 +115,7 @@ struct histogram {
   uint16_t allocd; //!< number of allocated bv pairs
   uint16_t used;   //!< number of used bv pairs
   uint32_t fast: 1;
+  hist_allocator_t *allocator;
   struct hist_bv_pair *bvs; //!< pointer to bv-pairs
 };
 
@@ -284,7 +291,7 @@ hist_deserialize(histogram_t *h, const void *buff, ssize_t len) {
   ssize_t bytes_read = 0;
   uint16_t nlen, cnt;
   if(len < 2) goto bad_read;
-  if(h->bvs) free(h->bvs);
+  if(h->bvs) h->allocator->free(h->bvs);
   h->bvs = NULL;
   memcpy(&nlen, cp, sizeof(nlen));
   ADVANCE(bytes_read, 2);
@@ -292,7 +299,7 @@ hist_deserialize(histogram_t *h, const void *buff, ssize_t len) {
   cnt = ntohs(nlen);
   h->allocd = cnt;
   if(h->allocd == 0) return bytes_read;
-  h->bvs = calloc(h->allocd, sizeof(*h->bvs));
+  h->bvs = h->allocator->calloc(h->allocd, sizeof(*h->bvs));
   if(!h->bvs) goto bad_read; /* yeah, yeah... bad label name */
   while(len > 0 && cnt > 0) {
     ssize_t incr_read = 0;
@@ -304,7 +311,7 @@ hist_deserialize(histogram_t *h, const void *buff, ssize_t len) {
   return bytes_read;
 
  bad_read:
-  if(h->bvs) free(h->bvs);
+  if(h->bvs) h->allocator->free(h->bvs);
   h->bvs = NULL;
   h->used = h->allocd = 0;
   return -1;
@@ -663,7 +670,7 @@ uint64_t
 hist_insert_raw(histogram_t *hist, hist_bucket_t hb, uint64_t count) {
   int found, idx;
   if(hist->bvs == NULL) {
-    hist->bvs = malloc(DEFAULT_HIST_SIZE * sizeof(*hist->bvs));
+    hist->bvs = hist->allocator->malloc(DEFAULT_HIST_SIZE * sizeof(*hist->bvs));
     hist->allocd = DEFAULT_HIST_SIZE;
   }
   found = hist_internal_find(hist, hb, &idx);
@@ -672,7 +679,7 @@ hist_insert_raw(histogram_t *hist, hist_bucket_t hb, uint64_t count) {
     if(hist->used == hist->allocd) {
       /* A resize is required */
       histogram_t dummy;
-      dummy.bvs = malloc((hist->allocd + DEFAULT_HIST_SIZE) *
+      dummy.bvs = hist->allocator->malloc((hist->allocd + DEFAULT_HIST_SIZE) *
                          sizeof(*hist->bvs));
       if(idx > 0)
         memcpy(dummy.bvs, hist->bvs, idx * sizeof(*hist->bvs));
@@ -681,7 +688,7 @@ hist_insert_raw(histogram_t *hist, hist_bucket_t hb, uint64_t count) {
       if(idx < hist->used)
         memcpy(dummy.bvs + idx + 1, hist->bvs + idx,
                (hist->used - idx)*sizeof(*hist->bvs));
-      free(hist->bvs);
+      hist->allocator->free(hist->bvs);
       hist->bvs = dummy.bvs;
       hist->allocd += DEFAULT_HIST_SIZE;
     }
@@ -699,7 +706,7 @@ hist_insert_raw(histogram_t *hist, hist_bucket_t hb, uint64_t count) {
       for(i=idx;i<hist->used;i++) {
         struct hist_flevel *faster = (struct hist_flevel *)&hist->bvs[i].bucket;
         if(hfast->faster[faster->l1] == NULL)
-          hfast->faster[faster->l1] = calloc(256, sizeof(uint16_t));
+          hfast->faster[faster->l1] = hist->allocator->calloc(256, sizeof(uint16_t));
         hfast->faster[faster->l1][faster->l2] = i+1;
       }
     }
@@ -880,9 +887,9 @@ hist_accumulate(histogram_t *tgt, const histogram_t* const *src, int cnt) {
   tgt->allocd = tgtneeds;
   tgt->used = 0;
   if (! tgt->allocd) tgt->allocd = 1;
-  tgt->bvs = calloc(tgt->allocd, sizeof(*tgt->bvs));
+  tgt->bvs = tgt->allocator->calloc(tgt->allocd, sizeof(*tgt->bvs));
   hist_needed_merge_size_fc(inclusive_src, cnt+1, internal_bucket_accum, tgt);
-  if(oldtgtbuff) free(oldtgtbuff);
+  if(oldtgtbuff) tgt->allocator->free(oldtgtbuff);
   return tgt->used;
 }
 
@@ -912,13 +919,24 @@ hist_alloc(void) {
 }
 
 histogram_t *
+hist_alloc_with_allocator(hist_allocator_t *allocator) {
+  return hist_alloc_nbins_with_allocator(0, allocator);
+}
+
+histogram_t *
 hist_alloc_nbins(int nbins) {
+  return hist_alloc_nbins_with_allocator(nbins, &default_allocator);
+}
+
+histogram_t *
+hist_alloc_nbins_with_allocator(int nbins, hist_allocator_t *allocator) {
   histogram_t *tgt;
   if(nbins < 1) nbins = DEFAULT_HIST_SIZE;
   if(nbins > MAX_HIST_BINS) nbins = MAX_HIST_BINS;
-  tgt = calloc(1, sizeof(histogram_t));
+  tgt = allocator->calloc(1, sizeof(histogram_t));
   tgt->allocd = nbins;
-  tgt->bvs = calloc(tgt->allocd, sizeof(*tgt->bvs));
+  tgt->bvs = allocator->calloc(tgt->allocd, sizeof(*tgt->bvs));
+  tgt->allocator = allocator;
   return tgt;
 }
 
@@ -928,35 +946,51 @@ hist_fast_alloc(void) {
 }
 
 histogram_t *
+hist_fast_alloc_with_allocator(hist_allocator_t *allocator) {
+  return hist_fast_alloc_nbins_with_allocator(0, allocator);
+}
+
+histogram_t *
 hist_fast_alloc_nbins(int nbins) {
+  return hist_fast_alloc_nbins_with_allocator(nbins, &default_allocator);
+}
+
+histogram_t *
+hist_fast_alloc_nbins_with_allocator(int nbins, hist_allocator_t *allocator) {
   struct histogram_fast *tgt;
   if(nbins < 1) nbins = DEFAULT_HIST_SIZE;
   if(nbins > MAX_HIST_BINS) nbins = MAX_HIST_BINS;
-  tgt = calloc(1, sizeof(struct histogram_fast));
+  tgt = allocator->calloc(1, sizeof(struct histogram_fast));
   tgt->internal.allocd = nbins;
-  tgt->internal.bvs = calloc(tgt->internal.allocd, sizeof(*tgt->internal.bvs));
+  tgt->internal.bvs = allocator->calloc(tgt->internal.allocd, sizeof(*tgt->internal.bvs));
   tgt->internal.fast = 1;
+  tgt->internal.allocator = allocator;
   return &tgt->internal;
 }
 
 histogram_t *
-hist_clone(histogram_t *other)
+hist_clone(histogram_t *other) {
+  return hist_clone_with_allocator(other, &default_allocator);
+}
+
+histogram_t *
+hist_clone_with_allocator(histogram_t *other, hist_allocator_t *allocator)
 {
   histogram_t *tgt = NULL;
   int i = 0;
   if (other->fast) {
-    tgt = hist_fast_alloc_nbins(other->allocd);
+    tgt = hist_fast_alloc_nbins_with_allocator(other->allocd, allocator);
     struct histogram_fast *f = (struct histogram_fast *)tgt;
     struct histogram_fast *of = (struct histogram_fast *)other;
     for(i=0;i<256;i++) {
       if (of->faster[i]) {
-        f->faster[i] = calloc(256, sizeof(uint16_t));
+        f->faster[i] = allocator->calloc(256, sizeof(uint16_t));
         memcpy(f->faster[i], of->faster[i], 256 * sizeof(uint16_t));
       }
     }
   }
   else {
-    tgt = hist_alloc_nbins(other->allocd);
+    tgt = hist_alloc_nbins_with_allocator(other->allocd, allocator);
   }
   memcpy(tgt->bvs, other->bvs, other->used * sizeof(struct hist_bv_pair));
   tgt->used = other->used;
@@ -966,13 +1000,15 @@ hist_clone(histogram_t *other)
 void
 hist_free(histogram_t *hist) {
   if(hist == NULL) return;
-  if(hist->bvs != NULL) free(hist->bvs);
+  hist_allocator_t *a = hist->allocator;
+  if(hist->bvs != NULL) a->free(hist->bvs);
   if(hist->fast) {
     int i;
     struct histogram_fast *hfast = (struct histogram_fast *)hist;
-    for(i=0;i<256;i++) free(hfast->faster[i]);
+    for(i=0;i<256;i++) a->free(hfast->faster[i]);
   }
-  free(hist);
+  
+  a->free(hist);
 }
 
 histogram_t *

@@ -370,6 +370,67 @@ void clone_test() {
 }
 
 
+static int my_free_called = 0;
+void my_free(void *x) {
+  my_free_called = 1;
+  free(x);
+}
+
+static int my_calloc_called = 0;
+void* my_calloc(size_t n, size_t x) {
+  my_calloc_called = 1;
+  return calloc(n, x);
+}
+
+void allocator_test() {
+  double s[] = { 0,1,2,3,10,11,12,21,22,23,99,100,110,120,210,220 };
+  int i, j;
+  // mbe = 0:    0 1 2 3 10 11 12 21 22 23 90 100 110 120 210 220 => 16 buckets
+  // mbe = 1:    0 0 0 0 10 10 10 20 20 20 90 100 110 120 210 220 => 9 buckets
+  // mbe = 2:    0 0 0 0 0  0  0  0  0  0  0  100 100 100 200 200 => 3 buckets
+
+  // replace `free` and `calloc` as a test
+  hist_allocator_t my_allocator = {
+    .calloc = my_calloc,
+    .malloc = malloc,
+    .free = my_free
+  };
+
+  histogram_t *h = build(s, sizeof(s)/sizeof(double));
+  histogram_t *clone = hist_clone_with_allocator(h, &my_allocator);
+
+  if(hist_bucket_count(clone) <= hist_bucket_count(h))
+    okf("%s", "clone equal or smaller");
+  else notokf("%s", "clone bigger");
+  if(hist_bucket_count(clone) == 0) notokf("%s", "cloned to zero");
+  for(j=0, i=0; i<hist_bucket_count(h); i++) {
+    hist_bucket_t ib, ob;
+    uint64_t ic, oc;
+    hist_bucket_idx_bucket(h, i, &ib, &ic);
+    if(ic == 0) continue;
+    hist_bucket_idx_bucket(clone, j++, &ob, &oc);
+    if(!(ib.val == ob.val && ib.exp == ob.exp && ic == oc))
+      failed = 1;
+  }
+  if(failed) notokf("%s", "histograms match");
+  else okf("%s %d buckets (%d empty)", "histograms match", j, i-j);
+
+  hist_free(h);
+  hist_free(clone);
+  if (my_free_called == 0) {
+    notokf("%s", "my_free not called");
+  } else {
+    okf("%s", "my_free called");
+  }
+
+  if (my_calloc_called == 0) {
+    notokf("%s", "my_calloc not called");
+  } else {
+    okf("%s", "my_calloc called");
+  }
+}
+
+
 int main() {
   srand48(time(NULL));
   bucket_tests();
@@ -424,6 +485,8 @@ int main() {
     T(serialize_test());
 
     T(clone_test());
+
+    T(allocator_test());
 
     halloc = hist_fast_alloc;
   }

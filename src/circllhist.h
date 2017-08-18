@@ -53,6 +53,12 @@ typedef struct hist_bucket {
   int8_t exp; //!< exponent -128 .. 127
 } hist_bucket_t;
 
+typedef struct hist_allocator {
+  void *(*malloc)(size_t);
+  void *(*calloc)(size_t, size_t);
+  void (*free)(void *);
+} hist_allocator_t;
+
 ////////////////////////////////////////////////////////////////////////////////
 // Histogram buckets
 
@@ -88,20 +94,35 @@ API_EXPORT(int) hist_bucket_to_string(hist_bucket_t hb, char *buf);
 ////////////////////////////////////////////////////////////////////////////////
 // Creating and destroying histograms
 
-//! Create a new histogram
+//! Create a new histogram, uses default allocator
 API_EXPORT(histogram_t *) hist_alloc(void);
-//! Create a new histogram with preallocated bins
+//! Create a new histogram with preallocated bins, uses default allocator
 API_EXPORT(histogram_t *) hist_alloc_nbins(int nbins);
 //! Create a fast-histogram
 /*! Fast allocations consume 2kb + N * 512b more memory
  *  where N is the number of used exponents.  It allows for O(1) increments for
- *  prexisting keys */
+ *  prexisting keys, uses default allocator */
 API_EXPORT(histogram_t *) hist_fast_alloc(void);
-//! Create a fast-histogram with preallocated bins
+//! Create a fast-histogram with preallocated bins, uses default allocator
 API_EXPORT(histogram_t *) hist_fast_alloc_nbins(int nbins);
-//! Create an exact copy of other
+//! Create an exact copy of other, uses default allocator
 API_EXPORT(histogram_t *) hist_clone(histogram_t *other);
-//! Free a (fast-) histogram
+
+//! Create a new histogram, uses custom allocator
+API_EXPORT(histogram_t *) hist_alloc_with_allocator(hist_allocator_t *alloc);
+//! Create a new histogram with preallocated bins, uses custom allocator
+API_EXPORT(histogram_t *) hist_alloc_nbins_with_allocator(int nbins, hist_allocator_t *alloc);
+//! Create a fast-histogram
+/*! Fast allocations consume 2kb + N * 512b more memory
+ *  where N is the number of used exponents.  It allows for O(1) increments for
+ *  prexisting keys, uses custom allocator */
+API_EXPORT(histogram_t *) hist_fast_alloc_with_allocator(hist_allocator_t *alloc);
+//! Create a fast-histogram with preallocated bins, uses custom allocator
+API_EXPORT(histogram_t *) hist_fast_alloc_nbins_with_allocator(int nbins, hist_allocator_t *alloc);
+//! Create an exact copy of other, uses custom allocator
+API_EXPORT(histogram_t *) hist_clone_with_allocator(histogram_t *other, hist_allocator_t *alloc);
+
+//! Free a (fast-) histogram, frees with allocator chosen during the alloc/clone
 API_EXPORT(void) hist_free(histogram_t *hist);
 
 ////////////////////////////////////////////////////////////////////////////////
