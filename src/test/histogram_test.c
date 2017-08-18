@@ -393,7 +393,6 @@ void allocator_test() {
   hist_allocator_t my_allocator = {
     .calloc = my_calloc,
     .malloc = malloc,
-    .realloc = realloc,
     .free = my_free
   };
 

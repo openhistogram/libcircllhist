@@ -48,7 +48,6 @@
 
 hist_allocator_t default_allocator = {
   .malloc = malloc,
-  .realloc = realloc,
   .calloc = calloc,
   .free = free
 };
