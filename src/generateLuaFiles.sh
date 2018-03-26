@@ -16,7 +16,7 @@ else
 fi
 AWK=awk
 
-cdef_content=`cat $src_dir/circllhist.h | egrep -v "#if|#endif|#define|#include" | $SED 's/u_int/uint/g' | $SED 's/API_EXPORT(\([^\)]*\))/\1/g' | $AWK '/typedef struct histogram histogram_t;/ {print "typedef long int ssize_t;"} /./{print}'`
+cdef_content=`cat $src_dir/circllhist.h | egrep -v "#if|#endif|#define|#include" | $SED 's/u_int/uint/g' | $SED 's/API_EXPORT(\([^\)]*\))/\1/g' | $AWK '/typedef struct histogram histogram_t;/ {print "typedef long int ssize_t;"} /^extern "C" {/{next} /^\/\//{next}  /^}$/{next} /./{print}'`
 
 D=`dirname $dst_file`
 if [ ! -e $D ]; then

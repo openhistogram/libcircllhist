@@ -32,6 +32,10 @@
 #ifndef CIRCLLHIST_H
 #define CIRCLLHIST_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define DEFAULT_HIST_SIZE 100
 //! Maximal size of hist bucket standard string format (inc. terminator)
 #define HIST_BUCKET_MAX_STRING_SIZE 9
@@ -192,5 +196,9 @@ API_EXPORT(double) hist_approx_sum(const histogram_t *);
 //! \param nq length of quantile array
 //! \param *q_out pre-allocated array where results shall be written to
 API_EXPORT(int) hist_approx_quantile(const histogram_t *, double *q_in, int nq, double *q_out);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
