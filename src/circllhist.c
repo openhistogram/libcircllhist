@@ -891,9 +891,9 @@ hist_accumulate(histogram_t *tgt, const histogram_t* const *src, int cnt) {
   int tgtneeds;
   void *oldtgtbuff = tgt->bvs;
   histogram_t tgt_copy;
-  histogram_t *inclusive_src_static[8193];
+  histogram_t *inclusive_src_static[1025];
   histogram_t **inclusive_src = inclusive_src_static;
-  if(cnt+1 > 8193) {
+  if(cnt+1 > 1025) {
     inclusive_src = malloc(sizeof(histogram_t *) * (cnt+1));
     if(!inclusive_src) return -1;
   }
