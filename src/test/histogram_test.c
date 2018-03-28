@@ -236,6 +236,21 @@ void q_test(double *vals, int nvals, double *in, int nin, double *expected) {
   free(out);
 }
 
+void simple_clear() {
+  histogram_t *h = hist_alloc();
+  double out[1], in[1] = {0};
+  hist_insert_intscale(h, 1, 0, 1);
+  hist_approx_quantile(h, in, 1, out);
+  if(out[0] != 1) notokf("preclear q(0) -> %g != 1", out[0]);
+  else ok();
+  hist_clear(h);
+  out[0] = 0;
+  hist_approx_quantile(h, in, 1, out);
+  if(!isnan(out[0])) notokf("postclear q(0) -> %g != NaN", out[0]);
+  else ok();
+  hist_free(h);
+}
+
 void accum_sub_test() {
   int i, j, samples = 0;
   histogram_t *tgt;
@@ -495,6 +510,8 @@ int main() {
 
   T(accum_sub_test());
   compress_test();
+
+  T(simple_clear());
 
   printf("%d..%d\n", 1, tcount-1);
   return failed ? -1 : 0;
