@@ -531,6 +531,8 @@ hist_approx_quantile(const histogram_t *hist, const double *q_in, int nq, double
     /* We don't include NaNs */
     if(hist_bucket_isnan(hist->bvs[i_b].bucket))
       continue;
+    if(hist->bvs[i_b].count == 0)
+      continue;
     TRACK_VARS(i_b);
     break;
   }

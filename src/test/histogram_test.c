@@ -445,6 +445,34 @@ void allocator_test() {
   }
 }
 
+static void issue_n() {
+  histogram_t* main_thread_interval_hist = hist_alloc();
+  histogram_t* per_thread_interval_hist = hist_alloc();
+
+  hist_insert_intscale(per_thread_interval_hist, 1, 0, 1);
+
+  double in[9] = {0, 0.25, 0.5, 0.75, 0.90, 0.95, 0.99, 0.999, 1};
+  double out[9];
+  hist_approx_quantile(main_thread_interval_hist, in, 9,out);
+
+  const histogram_t* const hist_array[1] = { per_thread_interval_hist };
+  hist_accumulate(main_thread_interval_hist, hist_array, 1);
+  hist_clear(per_thread_interval_hist);
+
+  hist_insert_intscale(per_thread_interval_hist, 2, 0, 1);
+  hist_approx_quantile(per_thread_interval_hist, in, 9,out);
+  isf(out[0] == 2, " min==2.0 != %g", out[0]);
+
+  main_thread_interval_hist = hist_alloc();
+  hist_accumulate(main_thread_interval_hist, hist_array, 1);
+  hist_approx_quantile(main_thread_interval_hist, in, 9,out);
+  isf(out[0] == 2, "min==1.0 != %g", 2.0);
+
+  histogram_t* direct_hist = hist_alloc();
+  hist_insert_intscale(direct_hist, 2, 0, 1);
+  hist_approx_quantile(direct_hist, in, 9,out);
+  isf(out[0] == 2, " min==2.0 != %g", out[0]);
+}
 
 int main() {
   srand48(time(NULL));
@@ -512,6 +540,8 @@ int main() {
   compress_test();
 
   T(simple_clear());
+
+  T(issue_n());
 
   printf("%d..%d\n", 1, tcount-1);
   return failed ? -1 : 0;
