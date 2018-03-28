@@ -195,7 +195,7 @@ API_EXPORT(double) hist_approx_sum(const histogram_t *);
 //! \param *q_in array of quantiles to comute
 //! \param nq length of quantile array
 //! \param *q_out pre-allocated array where results shall be written to
-API_EXPORT(int) hist_approx_quantile(const histogram_t *, double *q_in, int nq, double *q_out);
+API_EXPORT(int) hist_approx_quantile(const histogram_t *, const double *q_in, int nq, double *q_out);
 
 #ifdef __cplusplus
 }

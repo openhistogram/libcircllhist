@@ -490,7 +490,7 @@ hist_approx_sum(const histogram_t *hist) {
  * -3 (out of bound quantile)
  */
 int
-hist_approx_quantile(const histogram_t *hist, double *q_in, int nq, double *q_out) {
+hist_approx_quantile(const histogram_t *hist, const double *q_in, int nq, double *q_out) {
   int i_q, i_b;
   double total_cnt = 0.0, bucket_width = 0.0,
          bucket_left = 0.0, lower_cnt = 0.0, upper_cnt = 0.0;
