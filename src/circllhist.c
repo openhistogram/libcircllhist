@@ -28,14 +28,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "circllhist_config.h"
 #include <assert.h>
 
 #include <stdio.h>
 #include <stdlib.h>
-#ifdef HAVE_ALLOCA_H
-#include <alloca.h>
-#endif
 #include <errno.h>
 #include <sys/types.h>
 #include <string.h>
@@ -277,11 +273,17 @@ copy_of_mtev_b64_encode(const unsigned char *src, size_t src_len,
 ssize_t
 hist_serialize_b64(const histogram_t *h, char *b64_serialized_histo_buff, ssize_t buff_len) {
   ssize_t serialize_buff_length = hist_serialize_estimate(h);
-  void *serialize_buff = alloca(serialize_buff_length);
+  uint8_t serialize_buff_static[8192];
+  void *serialize_buff = (void *)serialize_buff_static;
+  if(serialize_buff_length > sizeof(serialize_buff_static)) {
+    serialize_buff = malloc(serialize_buff_length);
+    if(!serialize_buff) return -1;
+  }
   ssize_t serialized_length = hist_serialize(h, serialize_buff, serialize_buff_length);
   if (serialized_length > 0) {
-    return copy_of_mtev_b64_encode(serialize_buff, serialized_length, b64_serialized_histo_buff, buff_len);
+    serialized_length = copy_of_mtev_b64_encode(serialize_buff, serialized_length, b64_serialized_histo_buff, buff_len);
   }
+  if(serialize_buff != (void *)serialize_buff_static) free(serialize_buff);
   return serialized_length;
 }
 
@@ -358,18 +360,23 @@ copy_of_mtev_b64_decode(const char *src, size_t src_len,
 
 ssize_t hist_deserialize_b64(histogram_t *h, const void *b64_string, ssize_t b64_string_len) {
     int decoded_hist_len;
-    unsigned char* decoded_hist = alloca(b64_string_len);
+    unsigned char decoded_hist_static[8192];
+    unsigned char* decoded_hist = decoded_hist_static;
+    if(b64_string_len > sizeof(decoded_hist_static)) {
+      decoded_hist = malloc(b64_string_len);
+      if(!decoded_hist) return -1;
+    }
 
     decoded_hist_len = copy_of_mtev_b64_decode(b64_string, b64_string_len, decoded_hist, b64_string_len);
 
-    if (decoded_hist_len < 2) {
-      return -1;
+    ssize_t bytes_read = -1;
+    if (decoded_hist_len >= 2) {
+      bytes_read = hist_deserialize(h, decoded_hist, decoded_hist_len);
+      if (bytes_read != decoded_hist_len) {
+        bytes_read = -1;
+      }
     }
-
-    ssize_t bytes_read = hist_deserialize(h, decoded_hist, decoded_hist_len);
-    if (bytes_read != decoded_hist_len) {
-      return -1;
-    }
+    if(decoded_hist != decoded_hist_static) free(decoded_hist);
     return bytes_read;
 }
 
@@ -787,9 +794,13 @@ hist_needed_merge_size_fc(histogram_t **hist, int cnt,
                           void (*f)(histogram_t *tgt, int tgtidx,
                                     histogram_t *src, int srcidx),
                           histogram_t *tgt) {
-  unsigned short *idx;
+  unsigned short idx_static[8192];
+  unsigned short *idx = idx_static;
   int i, count = 0;
-  idx = alloca(cnt * sizeof(*idx));
+  if(cnt > 8192) {
+    idx = malloc(cnt * sizeof(*idx));
+    if(!idx) return -1;
+  }
   memset(idx, 0, cnt * sizeof(*idx));
   while(1) {
     hist_bucket_t smallest = { .exp = 0, .val = 0 };
@@ -814,6 +825,7 @@ hist_needed_merge_size_fc(histogram_t **hist, int cnt,
     }
     count++;
   }
+  if(idx != idx_static) free(idx);
   return count;
 }
 
@@ -879,7 +891,12 @@ hist_accumulate(histogram_t *tgt, const histogram_t* const *src, int cnt) {
   int tgtneeds;
   void *oldtgtbuff = tgt->bvs;
   histogram_t tgt_copy;
-  histogram_t **inclusive_src = alloca(sizeof(histogram_t *) * (cnt+1));
+  histogram_t *inclusive_src_static[1025];
+  histogram_t **inclusive_src = inclusive_src_static;
+  if(cnt+1 > 1025) {
+    inclusive_src = malloc(sizeof(histogram_t *) * (cnt+1));
+    if(!inclusive_src) return -1;
+  }
   memcpy(&tgt_copy, tgt, sizeof(*tgt));
   memcpy(inclusive_src, src, sizeof(*src)*cnt);
   inclusive_src[cnt] = &tgt_copy;
@@ -890,6 +907,7 @@ hist_accumulate(histogram_t *tgt, const histogram_t* const *src, int cnt) {
   tgt->bvs = tgt->allocator->calloc(tgt->allocd, sizeof(*tgt->bvs));
   hist_needed_merge_size_fc(inclusive_src, cnt+1, internal_bucket_accum, tgt);
   if(oldtgtbuff) tgt->allocator->free(oldtgtbuff);
+  if(inclusive_src != inclusive_src_static) free(inclusive_src);
   return tgt->used;
 }
 

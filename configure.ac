@@ -9,7 +9,6 @@ if test -f ".configure.$node"; then
 fi
 
 AC_CANONICAL_HOST
-AC_CONFIG_HEADER(src/circllhist_config.h)
 
 AC_ARG_ENABLE(strict,
 	[AC_HELP_STRING([--enable-strict],
