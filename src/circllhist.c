@@ -506,6 +506,12 @@ hist_approx_quantile(const histogram_t *hist, double *q_in, int nq, double *q_ou
 
   /* Run through the quantiles and make sure they are in order */
   for (i_q=1;i_q<nq;i_q++) if(q_in[i_q-1] > q_in[i_q]) return -2;
+
+  if(total_cnt == 0) {
+    for(i_q=0;i_q<nq;i_q++) q_out[i_q] = private_nan;
+    return 0;
+  }
+
   /* We use q_out as temporary space to hold the count-normailzed quantiles */
   for (i_q=0;i_q<nq;i_q++) {
     if(q_in[i_q] < 0.0 || q_in[i_q] > 1.0) return -3;
