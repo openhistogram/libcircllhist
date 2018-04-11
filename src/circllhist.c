@@ -616,8 +616,8 @@ double_to_hist_bucket(double d) {
     d *= 10;
     // avoid rounding problem at the bucket boundary
     // e.g. d=0.11 results in hb.val = 10 (should be 11)
-    // by allowing a error margin (in the order or magnitude
-    // of the exected rounding errors of the above transformations)
+    // by allowing an error margin (in the order or magnitude
+    // of the expected rounding errors of the above transformations)
     hb.val = sign * (int)floor(d + 1e-13);
     if(hb.val == 100 || hb.val == -100) {
       if (hb.exp < 127) {
