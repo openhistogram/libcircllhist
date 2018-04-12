@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2015, Circonus, Inc. All rights reserved.
+ * Copyright (c) 2012-2018, Circonus, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -512,7 +512,7 @@ hist_approx_quantile(const histogram_t *hist, const double *q_in, int nq, double
     return 0;
   }
 
-  /* We use q_out as temporary space to hold the count-normailzed quantiles */
+  /* We use q_out as temporary space to hold the count-normalized quantiles */
   for (i_q=0;i_q<nq;i_q++) {
     if(q_in[i_q] < 0.0 || q_in[i_q] > 1.0) return -3;
     q_out[i_q] = total_cnt * q_in[i_q];
@@ -615,9 +615,9 @@ double_to_hist_bucket(double d) {
     d /= power_of_ten[*pidx];
     d *= 10;
     // avoid rounding problem at the bucket boundary
-    // e.g. d=0.11 results in hb.val = 10 (shoud be 11)
-    // by allowing a error margin (in the order or magintude
-    // of the exected rounding errors of the above transformations)
+    // e.g. d=0.11 results in hb.val = 10 (should be 11)
+    // by allowing an error margin (in the order or magnitude
+    // of the expected rounding errors of the above transformations)
     hb.val = sign * (int)floor(d + 1e-13);
     if(hb.val == 100 || hb.val == -100) {
       if (hb.exp < 127) {
@@ -648,7 +648,7 @@ hist_internal_find(histogram_t *hist, hist_bucket_t hb, int *idx) {
   /* This is a simple binary search returning the idx in which
    * the specified bucket belongs... returning 1 if it is there
    * or 0 if the value would need to be inserted here (moving the
-   * rest of the buckets forward one.
+   * rest of the buckets forward one).
    */
   int rv = -1, l = 0, r = hist->used - 1;
   *idx = 0;
