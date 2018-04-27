@@ -909,6 +909,8 @@ hist_accumulate(histogram_t *tgt, const histogram_t* const *src, int cnt) {
   memcpy(inclusive_src, src, sizeof(*src)*cnt);
   inclusive_src[cnt] = &tgt_copy;
   tgtneeds = hist_needed_merge_size(inclusive_src, cnt+1);
+  if(tgtneeds < 0) return -1;
+  assert(tgtneeds <= 0xffff);
   tgt->allocd = tgtneeds;
   tgt->used = 0;
   if (! tgt->allocd) tgt->allocd = 1;
