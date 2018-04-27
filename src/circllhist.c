@@ -54,6 +54,14 @@ static union {
 } private_nan_union = { .private_nan_internal_rep = 0x7fffffffffffffff };
 
 #define MAX_HIST_BINS (2 + 2 * 90 * 256)
+#ifdef DEBUG
+#define assert_good_hist(h) do { \
+  assert(h->allocd <= MAX_HIST_BINS); \
+  assert(h->used <= h->allocd); \
+} while(0)
+#else
+#define assert_good_hist(h)
+#endif
 #define private_nan private_nan_union.private_nan_double_rep
 
 static double power_of_ten[256] = {
@@ -460,6 +468,7 @@ hist_approx_mean(const histogram_t *hist) {
   int i;
   double divisor = 0.0;
   double sum = 0.0;
+  assert_good_hist(hist);
   for(i=0; i<hist->used; i++) {
     if(hist_bucket_isnan(hist->bvs[i].bucket)) continue;
     double midpoint = hist_bucket_midpoint(hist->bvs[i].bucket);
@@ -475,6 +484,7 @@ double
 hist_approx_sum(const histogram_t *hist) {
   int i;
   double sum = 0.0;
+  assert_good_hist(hist);
   for(i=0; i<hist->used; i++) {
     if(hist_bucket_isnan(hist->bvs[i].bucket)) continue;
     double value = hist_bucket_midpoint(hist->bvs[i].bucket);
@@ -494,6 +504,7 @@ hist_approx_quantile(const histogram_t *hist, const double *q_in, int nq, double
   int i_q, i_b;
   double total_cnt = 0.0, bucket_width = 0.0,
          bucket_left = 0.0, lower_cnt = 0.0, upper_cnt = 0.0;
+  assert_good_hist(hist);
   if(nq < 1) return 0; /* nothing requested, easy to satisfy successfully */
 
   /* Sum up all samples from all the bins */
@@ -652,6 +663,7 @@ hist_internal_find(histogram_t *hist, hist_bucket_t hb, int *idx) {
    */
   int rv = -1, l = 0, r = hist->used - 1;
   *idx = 0;
+  assert_good_hist(hist);
   if(hist->used == 0) return 0;
   if(hist->fast) {
     struct histogram_fast *hfast = (struct histogram_fast *)hist;
@@ -684,6 +696,7 @@ hist_internal_find(histogram_t *hist, hist_bucket_t hb, int *idx) {
 uint64_t
 hist_insert_raw(histogram_t *hist, hist_bucket_t hb, uint64_t count) {
   int found, idx;
+  assert_good_hist(hist);
   if(hist->bvs == NULL) {
     hist->bvs = hist->allocator->malloc(DEFAULT_HIST_SIZE * sizeof(*hist->bvs));
     hist->allocd = DEFAULT_HIST_SIZE;
@@ -734,6 +747,7 @@ hist_insert_raw(histogram_t *hist, hist_bucket_t hb, uint64_t count) {
     count = newval - hist->bvs[idx].count;
     hist->bvs[idx].count = newval;
   }
+  assert_good_hist(hist);
   return count;
 }
 
@@ -751,12 +765,14 @@ uint64_t
 hist_remove(histogram_t *hist, double val, uint64_t count) {
   hist_bucket_t hb;
   int idx;
+  assert_good_hist(hist);
   hb = double_to_hist_bucket(val);
   if(hist_internal_find(hist, hb, &idx)) {
     uint64_t newval = hist->bvs[idx].count - count;
     if(newval > hist->bvs[idx].count) newval = 0; /* we rolled */
     count = hist->bvs[idx].count - newval;
     hist->bvs[idx].count = newval;
+    assert_good_hist(hist);
     return count;
   }
   return 0;
@@ -766,6 +782,7 @@ uint64_t
 hist_sample_count(const histogram_t *hist) {
   int i;
   uint64_t total = 0, last = 0;
+  assert_good_hist(hist);
   for(i=0;i<hist->used;i++) {
     last = total;
     total += hist->bvs[i].count;
@@ -776,12 +793,14 @@ hist_sample_count(const histogram_t *hist) {
 
 int
 hist_bucket_count(const histogram_t *hist) {
+  assert_good_hist(hist);
   return hist ? hist->used : 0;
 }
 
 int
 hist_bucket_idx(const histogram_t *hist, int idx,
                 double *bucket, uint64_t *count) {
+  assert_good_hist(hist);
   if(idx < 0 || idx >= hist->used) return 0;
   *bucket = hist_bucket_to_double(hist->bvs[idx].bucket);
   *count = hist->bvs[idx].count;
@@ -791,6 +810,7 @@ hist_bucket_idx(const histogram_t *hist, int idx,
 int
 hist_bucket_idx_bucket(const histogram_t *hist, int idx,
                        hist_bucket_t *bucket, uint64_t *count) {
+  assert_good_hist(hist);
   if(idx < 0 || idx >= hist->used) return 0;
   *bucket = hist->bvs[idx].bucket;
   *count = hist->bvs[idx].count;
@@ -802,6 +822,7 @@ hist_needed_merge_size_fc(histogram_t **hist, int cnt,
                           void (*f)(histogram_t *tgt, int tgtidx,
                                     histogram_t *src, int srcidx),
                           histogram_t *tgt) {
+  assert_good_hist(hist[0]);
   unsigned short idx_static[8192];
   unsigned short *idx = idx_static;
   int i, count = 0;
@@ -841,6 +862,7 @@ static void
 internal_bucket_accum(histogram_t *tgt, int tgtidx,
                       histogram_t *src, int srcidx) {
   uint64_t newval;
+  assert_good_hist(tgt);
   assert(tgtidx < tgt->allocd);
   if(tgt->used == tgtidx) {
     tgt->bvs[tgtidx].bucket = src->bvs[srcidx].bucket;
@@ -857,8 +879,10 @@ int
 hist_subtract(histogram_t *tgt, const histogram_t * const *hist, int cnt) {
   int i, tgt_idx, src_idx;
   int rv = 0;
+  assert_good_hist(tgt);
   for(i=0;i<cnt;i++) {
     tgt_idx = src_idx = 0;
+    assert_good_hist(hist[i]);
     while(tgt_idx < tgt->used && src_idx < hist[i]->used) {
       int cmp = hist_bucket_cmp(tgt->bvs[tgt_idx].bucket, hist[i]->bvs[src_idx].bucket);
       /* if the match, attempt to subtract, and move tgt && src fwd. */
@@ -886,6 +910,7 @@ hist_subtract(histogram_t *tgt, const histogram_t * const *hist, int cnt) {
       src_idx++;
     }
   }
+  assert_good_hist(tgt);
   return rv;
 }
 
@@ -897,6 +922,7 @@ hist_needed_merge_size(histogram_t **hist, int cnt) {
 int
 hist_accumulate(histogram_t *tgt, const histogram_t* const *src, int cnt) {
   int tgtneeds;
+  assert_good_hist(tgt);
   void *oldtgtbuff = tgt->bvs;
   histogram_t tgt_copy;
   histogram_t *inclusive_src_static[1025];
@@ -909,7 +935,10 @@ hist_accumulate(histogram_t *tgt, const histogram_t* const *src, int cnt) {
   memcpy(inclusive_src, src, sizeof(*src)*cnt);
   inclusive_src[cnt] = &tgt_copy;
   tgtneeds = hist_needed_merge_size(inclusive_src, cnt+1);
-  if(tgtneeds < 0) return -1;
+  if(tgtneeds < 0) {
+    if(inclusive_src != inclusive_src_static) free(inclusive_src);
+    return -1;
+  }
   assert(tgtneeds <= 0xffff);
   tgt->allocd = tgtneeds;
   tgt->used = 0;
@@ -918,6 +947,7 @@ hist_accumulate(histogram_t *tgt, const histogram_t* const *src, int cnt) {
   hist_needed_merge_size_fc(inclusive_src, cnt+1, internal_bucket_accum, tgt);
   if(oldtgtbuff) tgt->allocator->free(oldtgtbuff);
   if(inclusive_src != inclusive_src_static) free(inclusive_src);
+  assert_good_hist(tgt);
   return tgt->used;
 }
 
@@ -929,6 +959,7 @@ hist_num_buckets(const histogram_t *hist) {
 void
 hist_clear(histogram_t *hist) {
   int i;
+  assert_good_hist(hist);
   for(i=0;i<hist->used;i++)
     hist->bvs[i].count = 0;
   if(hist->fast) {
