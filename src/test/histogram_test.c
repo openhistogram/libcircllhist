@@ -60,10 +60,26 @@ void bucket_tests() {
   hist_bucket_t b, o;
   char hbstr[HIST_BUCKET_MAX_STRING_SIZE] = {0};
 
+  int_scale_to_hist_bucket(INT64_MIN, 1);
+  int_scale_to_hist_bucket(INT64_MAX, 1);
+  int_scale_to_hist_bucket(INT64_MIN, -127);
+  int_scale_to_hist_bucket(INT64_MAX, -200);
+  int_scale_to_hist_bucket(10, -128);
+
   b = int_scale_to_hist_bucket(0,0);
   T(is(b.val == 0 && b.exp == 0));
   hist_bucket_to_string(b, hbstr);
   T(is(strcmp(hbstr, "0")==0));
+
+  b = int_scale_to_hist_bucket(100,0);
+  T(is(b.val == 10 && b.exp == 2));
+  hist_bucket_to_string(b, hbstr);
+  T(is(strcmp(hbstr, "+10e+001")==0));
+
+  b = double_to_hist_bucket(100.0);
+  T(is(b.val == 10 && b.exp == 2));
+  hist_bucket_to_string(b, hbstr);
+  T(is(strcmp(hbstr, "+10e+001")==0));
 
   b = int_scale_to_hist_bucket(2,0);
   o = double_to_hist_bucket(2);
@@ -275,7 +291,7 @@ void accum_sub_test() {
 }
 
 void serialize_test() {
-  int i,j,failed=0;
+  int i,j,lfailed=0;
   histogram_t *in, *out;
 
   /* We build it clear it and build it one shorter.. This way the 0.13 bucket will be zero */
@@ -309,9 +325,9 @@ void serialize_test() {
     if(ic == 0) continue;
     hist_bucket_idx_bucket(out, j++, &ob, &oc);
     if(!(ib.val == ob.val && ib.exp == ob.exp && ic == oc))
-      failed = 1;
+      lfailed = 1;
   }
-  if(failed) notokf("%s", "histograms match");
+  if(lfailed) notokf("%s", "histograms match");
   else okf("%s %d buckets (%d empty)", "histograms match", j, i-j);
 
   hist_free(in);
@@ -357,7 +373,7 @@ void compress_test() {
 
 void clone_test() {
   double s[] = { 0,1,2,3,10,11,12,21,22,23,99,100,110,120,210,220 };
-  int i, j;
+  int i, j, lfailed = 0;
   // mbe = 0:    0 1 2 3 10 11 12 21 22 23 90 100 110 120 210 220 => 16 buckets
   // mbe = 1:    0 0 0 0 10 10 10 20 20 20 90 100 110 120 210 220 => 9 buckets
   // mbe = 2:    0 0 0 0 0  0  0  0  0  0  0  100 100 100 200 200 => 3 buckets
@@ -375,9 +391,9 @@ void clone_test() {
     if(ic == 0) continue;
     hist_bucket_idx_bucket(clone, j++, &ob, &oc);
     if(!(ib.val == ob.val && ib.exp == ob.exp && ic == oc))
-      failed = 1;
+      lfailed = 1;
   }
-  if(failed) notokf("%s", "histograms match");
+  if(lfailed) notokf("%s", "histograms match");
   else okf("%s %d buckets (%d empty)", "histograms match", j, i-j);
 
   hist_free(h);
@@ -399,7 +415,7 @@ void* my_calloc(size_t n, size_t x) {
 
 void allocator_test() {
   double s[] = { 0,1,2,3,10,11,12,21,22,23,99,100,110,120,210,220 };
-  int i, j;
+  int i, j, lfailed = 0;
   // mbe = 0:    0 1 2 3 10 11 12 21 22 23 90 100 110 120 210 220 => 16 buckets
   // mbe = 1:    0 0 0 0 10 10 10 20 20 20 90 100 110 120 210 220 => 9 buckets
   // mbe = 2:    0 0 0 0 0  0  0  0  0  0  0  100 100 100 200 200 => 3 buckets
@@ -425,9 +441,9 @@ void allocator_test() {
     if(ic == 0) continue;
     hist_bucket_idx_bucket(clone, j++, &ob, &oc);
     if(!(ib.val == ob.val && ib.exp == ob.exp && ic == oc))
-      failed = 1;
+      lfailed = 1;
   }
-  if(failed) notokf("%s", "histograms match");
+  if(lfailed) notokf("%s", "histograms match");
   else okf("%s %d buckets (%d empty)", "histograms match", j, i-j);
 
   hist_free(h);
