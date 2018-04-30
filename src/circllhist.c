@@ -56,7 +56,7 @@ static union {
 static const hist_bucket_t hbnan = { (int8_t)0xff, 0 };
 
 #define MAX_HIST_BINS (2 + 2 * 90 * 256)
-#ifdef DEBUG
+#ifndef NDEBUG
 #define ASSERT_GOOD_HIST(h) do { \
   assert(h->allocd <= MAX_HIST_BINS); \
   assert(h->used <= h->allocd); \
