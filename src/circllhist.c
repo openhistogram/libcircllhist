@@ -799,7 +799,9 @@ hist_sample_count(const histogram_t *hist) {
 
 int
 hist_bucket_count(const histogram_t *hist) {
-  ASSERT_GOOD_HIST(hist);
+#ifndef NDEBUG
+  if(hist) ASSERT_GOOD_HIST(hist);
+#endif
   return hist ? hist->used : 0;
 }
 
