@@ -53,6 +53,8 @@ static union {
    double    private_nan_double_rep;
 } private_nan_union = { .private_nan_internal_rep = 0x7fffffffffffffff };
 
+static const hist_bucket_t hbnan = { (int8_t)0xff, 0 };
+
 #define MAX_HIST_BINS (2 + 2 * 90 * 256)
 #ifdef DEBUG
 #define assert_good_hist(h) do { \
@@ -390,16 +392,19 @@ ssize_t hist_deserialize_b64(histogram_t *h, const void *b64_string, ssize_t b64
 
 static inline int
 hist_bucket_isnan(hist_bucket_t hb) {
-  int8_t aval = abs(hb.val);
+  int aval = abs(hb.val);
   if (99 <  aval) return 1; // in [100... ]: nan
   if ( 9 <  aval) return 0; // in [10 - 99]: valid range
   if ( 0 <  aval) return 1; // in [1  - 9 ]: nan
   if ( 0 == aval) return 0; // in [0]:       zero bucket
+  assert(0);
   return 0;
 }
 
 static inline
 int hist_bucket_cmp(hist_bucket_t h1, hist_bucket_t h2) {
+  assert(!hist_bucket_isnan(h1) || 0 == memcmp(&h1, &hbnan, sizeof(h1)));
+  assert(!hist_bucket_isnan(h2) || 0 == memcmp(&h2, &hbnan, sizeof(h2)));
   // checks if h1 < h2 on the real axis.
   if(*(uint16_t *)&h1 == *(uint16_t *)&h2) return 0;
   /* place NaNs at the beginning always */
@@ -572,7 +577,6 @@ hist_approx_quantile(const histogram_t *hist, const double *q_in, int nq, double
 
 hist_bucket_t
 int_scale_to_hist_bucket(int64_t value, int scale) {
-  static hist_bucket_t hbnan = { (int8_t)0xff, 0 };
   hist_bucket_t hb = { 0, 0 };
   int sign = 1;
   if(value == 0) return hb;
@@ -593,6 +597,7 @@ int_scale_to_hist_bucket(int64_t value, int scale) {
   if(scale > 127) return hbnan;
   hb.val = sign * value;
   hb.exp = scale;
+  assert(!hist_bucket_isnan(hb) || 0 == memcmp(&hb,&hbnan,sizeof(hb)));
   return hb;
 }
 
@@ -611,15 +616,9 @@ double_to_hist_bucket(double d) {
     big_exp = (int32_t)floor(log10(d));
     hb.exp = (int8_t)big_exp;
     if(hb.exp != big_exp) { /* we rolled */
-      if(big_exp < 0) {
-        /* d is in [0 .. 1e-128). Return 0 */
-        hb.val = 0;
-        hb.exp = 0;
-      } else {
-        /* d is >= 1e128. Return NaN */
-        hb.val = (int8_t)0xff;
-        hb.exp = 0;
-      }
+      if(big_exp >= 0) return hbnan;
+      hb.val = 0;
+      hb.exp = 0;
       return hb;
     }
     pidx = (uint8_t *)&hb.exp;
@@ -635,8 +634,7 @@ double_to_hist_bucket(double d) {
         hb.val /= 10;
         hb.exp++;
       } else { // can't increase exponent. Return NaN
-        hb.val = (int8_t)0xff;
-        hb.exp = 0;
+        return hbnan;
       }
     }
     if(hb.val == 0) {
@@ -645,10 +643,7 @@ double_to_hist_bucket(double d) {
     }
     if(!((hb.val >= 10 && hb.val < 100) ||
          (hb.val <= -10 && hb.val > -100))) {
-      uint64_t double_pun = 0;
-      memcpy(&double_pun, &d_copy, sizeof(d_copy));
-      hb.val = (int8_t)0xff;
-      hb.exp = 0;
+      return hbnan;
     }
   }
   return hb;
@@ -854,6 +849,7 @@ hist_needed_merge_size_fc(histogram_t **hist, int cnt,
     }
     count++;
   }
+  assert(count <= MAX_HIST_BINS);
   if(idx != idx_static) free(idx);
   return count;
 }
@@ -939,7 +935,7 @@ hist_accumulate(histogram_t *tgt, const histogram_t* const *src, int cnt) {
     if(inclusive_src != inclusive_src_static) free(inclusive_src);
     return -1;
   }
-  assert(tgtneeds <= 0xffff);
+  assert(tgtneeds <= MAX_HIST_BINS);
   tgt->allocd = tgtneeds;
   tgt->used = 0;
   if (! tgt->allocd) tgt->allocd = 1;
