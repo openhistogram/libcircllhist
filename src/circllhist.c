@@ -616,7 +616,6 @@ int_scale_to_hist_bucket(int64_t value, int scale) {
 
 hist_bucket_t
 double_to_hist_bucket(double d) {
-  double d_copy = d;
   hist_bucket_t hb = { (int8_t)0xff, 0 }; // NaN
   assert(private_nan != 0);
   if(isnan(d) || isinf(d)) return hb;
