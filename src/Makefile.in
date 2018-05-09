@@ -72,8 +72,9 @@ SHLDFLAGS+=-current_version $(LIBCIRCLLHIST_VERSION) -install_name $(libdir)/$(L
 endif
 
 LUA_FFI=lua/ffi_libcircllhist.lua
+PYTHON_FFI=python/circllhist/ffi.py
 
-TARGETS=$(LIBCIRCLLHISTA) $(LIBCIRCLLHIST) $(LUA_FFI) test/histogram_test test/histogram_perf
+TARGETS=$(LIBCIRCLLHISTA) $(LIBCIRCLLHIST) $(LUA_FFI) $(PYTHON_FFI) test/histogram_test test/histogram_perf
 
 all:	reversion $(TARGETS)
 
@@ -112,6 +113,9 @@ test/histogram_perf: test/histogram_perf.c $(LIBCIRCLLHIST)
 
 $(LUA_FFI):	circllhist.h
 	./generateLuaFiles.sh . $@
+
+$(PYTHON_FFI):	circllhist.h
+	./generatePythonFiles.sh . $@
 
 .c.lo:
 	@echo "- compiling $<"
