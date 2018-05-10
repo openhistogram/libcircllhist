@@ -3,6 +3,7 @@ The circllhist python module provides a wrapper around the libcircllhist data st
 """
 
 import sys
+import json
 import circllhist.ffi as ffi
 
 if sys.version_info[0] == 3:
@@ -104,4 +105,4 @@ class Circllhist(object):
         return h
 
     def __str__(self):
-        return '\n'.join("H[{}]->{}".format(b, c) for b, c in self)
+        return json.dumps(self.to_dict())
