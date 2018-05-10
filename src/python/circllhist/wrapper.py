@@ -85,5 +85,19 @@ class Circllhist(object):
         ffi.C.hist_approx_quantile(self._h, q_in, 1, q_out)
         return q_out[0]
 
+    def to_dict(self):
+        "Use this to generate JSON output"
+        d = {}
+        for b, c in self:
+            d[str(b)] = c
+        return d
+
+    @classmethod
+    def from_dict(cls, d):
+        h = cls()
+        for k, v in d.items():
+            h.insert(float(k), v)
+        return h
+
     def __str__(self):
         return '\n'.join("H[{}]->{}".format(b, c) for b, c in self)
