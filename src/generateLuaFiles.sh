@@ -2,8 +2,8 @@
 
 if [ $# -lt 2 ]
 then
-	echo "Usage: generateLuaFile.sh <libcircllhist_src_dir> <destination_file>"
-	exit
+  echo "Usage: $0 <libcircllhist_src_dir> <destination_file>"
+  exit
 fi
 
 src_dir=$1

@@ -147,6 +147,9 @@ install-libs:    $(LIBCIRCLLHIST) $(LUA_FFI)
 
 install:	install-headers install-libs
 
+install-python:
+	cd python && python setup.py install
+
 tests: test/histogram_test test/histogram_perf $(LUA_FFI)
 	test/runTest.sh
 
