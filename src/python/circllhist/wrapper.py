@@ -63,6 +63,11 @@ class Circllhist(object):
         "Insert a value of val * 10^scale into this histogram. Use this if you can."
         ffi.C.hist_insert_intscale(self._h, val, scale, count)
 
+    def merge(self, hist):
+        p = ffi.ffi.new("histogram_t **")
+        p[0] = hist._h
+        ffi.C.hist_accumulate(self._h, p, 1)
+
     def clear(self):
         "Clear data. fast. Keep allocations."
         ffi.C.hist_clear(self._h)
@@ -102,6 +107,20 @@ class Circllhist(object):
         h = cls()
         for k, v in d.items():
             h.insert(float(k), v)
+        return h
+
+    def to_b64(self):
+        sz = ffi.C.hist_serialize_b64_estimate(self._h)
+        buf = ffi.ffi.new("char[]", sz)
+        ffi.C.hist_serialize_b64(self._h, buf, sz)
+        return str_ascii(ffi.ffi.string(buf))
+
+    @classmethod
+    def from_b64(cls, b64):
+        h = cls()
+        buf = b64.encode("ASCII")
+        sz = len(buf)
+        ffi.C.hist_deserialize_b64(h._h, buf, sz)
         return h
 
     def __str__(self):
