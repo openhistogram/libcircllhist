@@ -13,6 +13,8 @@ else:
 class Circllbin(object):
     "Wraps a histogram bin"
 
+    __slots__ = ("_b",)
+
     def __init__(self, b):
         self._b = b
 
@@ -38,6 +40,8 @@ class Circllbin(object):
 
 class Circllhist(object):
     "Wraps a log-linear histogram"
+
+    __slots__ = ("_h",)
 
     def __init__(self):
         self._h = ffi.ffi.gc(ffi.C.hist_alloc(), ffi.C.hist_free)
