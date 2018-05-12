@@ -111,11 +111,16 @@ test/histogram_test: test/histogram_test.c $(LIBCIRCLLHIST)
 test/histogram_perf: test/histogram_perf.c $(LIBCIRCLLHIST)
 	$(Q)$(CC) -I. $(CPPFLAGS) $(CFLAGS) -L. $(LDFLAGS) -I. -o $@ test/histogram_perf.c -lcircllhist -lm
 
-$(LUA_FFI):	circllhist.h
-	./generateLuaFiles.sh . $@
+circllhist.ffi.h: circllhist.h
+	./prepareFFI.sh < $< > $@
 
-$(PYTHON_FFI):	circllhist.h
-	./generatePythonFiles.sh . $@
+$(LUA_FFI): circllhist.ffi.h
+	mkdir -p $$(dirname $@)
+	./generateLuaFiles.sh < $< > $@
+
+$(PYTHON_FFI): circllhist.ffi.h
+	mkdir -p $$(dirname $@)
+	./generatePythonFiles.sh < $< > $@
 
 .c.lo:
 	@echo "- compiling $<"
@@ -152,6 +157,9 @@ install-python:
 
 tests: test/histogram_test test/histogram_perf $(LUA_FFI)
 	test/runTest.sh
+
+tests-python:
+	python python/test.py
 
 clean:
 	rm -f *.lo *.o $(TARGETS)

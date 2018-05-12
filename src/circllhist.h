@@ -33,7 +33,7 @@
 #define CIRCLLHIST_H
 
 #ifdef __cplusplus
-extern "C" {
+extern "C" { /* FFI_SKIP */
 #endif
 
 #define DEFAULT_HIST_SIZE 100
@@ -198,7 +198,7 @@ API_EXPORT(double) hist_approx_sum(const histogram_t *);
 API_EXPORT(int) hist_approx_quantile(const histogram_t *, const double *q_in, int nq, double *q_out);
 
 #ifdef __cplusplus
-}
+} /* FFI_SKIP */
 #endif
 
 #endif
