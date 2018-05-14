@@ -512,6 +512,26 @@ hist_approx_sum(const histogram_t *hist) {
   return sum;
 }
 
+double
+hist_approx_stddev(const histogram_t *hist) {
+  int i;
+  double total_count = 0.0;
+  double s1 = 0.0;
+  double s2 = 0.0;
+  ASSERT_GOOD_HIST(hist);
+  if(hist->used == 0) return 0.0;
+  for(i=0; i<hist->used; i++) {
+    if(hist_bucket_isnan(hist->bvs[i].bucket)) continue;
+    double midpoint = hist_bucket_midpoint(hist->bvs[i].bucket);
+    double count = hist->bvs[i].count;
+    total_count += count;
+    s1 += midpoint * count;
+    s2 += pow(midpoint, 2.0) * count;
+  }
+  assert(total_count > 0.0);
+  return sqrt(s2 / total_count - pow(s1 / total_count, 2.0));
+}
+
 /* 0 success,
  * -1 (empty histogram),
  * -2 (out of order quantile request)
