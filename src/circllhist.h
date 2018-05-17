@@ -197,6 +197,8 @@ API_EXPORT(double) hist_approx_mean(const histogram_t *);
 API_EXPORT(double) hist_approx_sum(const histogram_t *);
 API_EXPORT(double) hist_approx_stddev(const histogram_t *);
 API_EXPORT(double) hist_approx_moment(const histogram_t *, double k);
+API_EXPORT(void) hist_approx_count_below(const histogram_t *hist, double *thresholds, int nthresholds, uint64_t *out);
+API_EXPORT(void) hist_approx_count_above(const histogram_t *hist, double *thresholds, int nthresholds, uint64_t *out);
 //! Approiximate n quantiles of all values stored in the histogram
 //! \param *q_in array of quantiles to comute
 //! \param nq length of quantile array
