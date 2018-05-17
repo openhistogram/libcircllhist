@@ -548,10 +548,11 @@ hist_approx_moment(const histogram_t *hist, double k) {
   return sk / pow(total_count, k);
 }
 
-static uint64_t
-_hist_approx_count_below_single(const histogram_t *hist, double threshold) {
+uint64_t
+hist_approx_count_below(const histogram_t *hist, double threshold) {
   int i;
   uint64_t running_count = 0;
+  ASSERT_GOOD_HIST(hist);
   for(i=0; i<hist->used; i++) {
     if(hist_bucket_isnan(hist->bvs[i].bucket)) continue;
     double bucket_bound = hist_bucket_to_double(hist->bvs[i].bucket);
@@ -568,19 +569,10 @@ _hist_approx_count_below_single(const histogram_t *hist, double threshold) {
   return running_count;
 }
 
-void
-hist_approx_count_below(const histogram_t *hist, double *thresholds,
-                        int nthresholds, uint64_t *out) {
+uint64_t
+hist_approx_count_above(const histogram_t *hist, double threshold) {
   int i;
   ASSERT_GOOD_HIST(hist);
-  for(i=0; i<nthresholds; i++) {
-    out[i] = _hist_approx_count_below_single(hist, thresholds[i]);
-  }
-}
-
-static uint64_t
-_hist_approx_count_above_single(const histogram_t *hist, double threshold) {
-  int i;
   uint64_t running_count = hist_sample_count(hist);
   for(i=0; i<hist->used; i++) {
     if(hist_bucket_isnan(hist->bvs[i].bucket)) continue;
@@ -596,16 +588,6 @@ _hist_approx_count_above_single(const histogram_t *hist, double threshold) {
       break;
   }
   return running_count;
-}
-
-void
-hist_approx_count_above(const histogram_t *hist, double *thresholds,
-                        int nthresholds, uint64_t *out) {
-  int i;
-  ASSERT_GOOD_HIST(hist);
-  for(i=0; i<nthresholds; i++) {
-    out[i] = _hist_approx_count_above_single(hist, thresholds[i]);
-  }
 }
 
 /* 0 success,
