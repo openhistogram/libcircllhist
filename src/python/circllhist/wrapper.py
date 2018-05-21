@@ -88,6 +88,22 @@ class Circllhist(object):
         "Returns an approximation of the sum"
         return ffi.C.hist_approx_sum(self._h)
 
+    def stddev(self):
+        "Returns an approximation of the standard deviation"
+        return ffi.C.hist_approx_stddev(self._h)
+
+    def moment(self, k):
+        "Returns an approximation of the k-th moment"
+        return ffi.C.hist_approx_moment(self._h, k)
+
+    def count_below(self, threshold):
+        "Returns the number of values in buckets that are entirely lower than or equal to threshold"
+        return ffi.C.hist_approx_count_below(self._h, threshold)
+
+    def count_above(self, threshold):
+        "Returns the number of values in buckets that are entirely larger than or equal to threshold"
+        return ffi.C.hist_approx_count_above(self._h, threshold)
+
     def quantile(self, q):
         "Returns an approximation of the q-quantile"
         q_in = ffi.ffi.new("double*", q)
