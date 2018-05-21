@@ -22,5 +22,5 @@ for path in [ # Search for libcircllhist.so
      pass
 if not C:
    # let dlopen throw it's error
-   ffi.dlopen("libcirllhist.so")
+   ffi.dlopen("libcircllhist.so")
 EOF

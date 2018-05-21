@@ -29,6 +29,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/*! \mainpage A C implementation of Circonus log-linear histograms
+* \ref circllhist.h
+*/
+
 #ifndef CIRCLLHIST_H
 #define CIRCLLHIST_H
 
