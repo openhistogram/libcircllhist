@@ -528,7 +528,7 @@ hist_approx_stddev(const histogram_t *hist) {
     s1 += midpoint * count;
     s2 += pow(midpoint, 2.0) * count;
   }
-  assert(total_count > 0.0);
+  if(total_count == 0.0) return private_nan;
   return sqrt(s2 / total_count - pow(s1 / total_count, 2.0));
 }
 
@@ -545,6 +545,7 @@ hist_approx_moment(const histogram_t *hist, double k) {
     total_count += count;
     sk += pow(midpoint, k) * count;
   }
+  if(total_count == 0.0) return private_nan;
   return sk / pow(total_count, k);
 }
 
