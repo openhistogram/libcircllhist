@@ -80,7 +80,10 @@ fi
 if ! $PYTHON_BIN -c "import cffi" > /dev/null 2>&1;
 then
     echo "Installing Python CFFI"
-    $PYTHON_BIN setup.py develop --user > /dev/null
+    if ! $PYTHON_BIN setup.py develop --user > /dev/null 2>&1;
+    then
+        $PYTHON_BIN -m pip install cffi > /dev/null
+    fi
 fi
 
 echo "Running: $ $PYTHON_BIN test.py"
