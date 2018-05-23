@@ -24,4 +24,6 @@ src/circllhist_version.h
 src/libcircllhist.so*
 src/test/histogram_test
 src/test/histogram_perf
+src/circllhist.ffi.h
 src/lua/ffi_libcircllhist.lua
+src/python/circllhist/ffi.py

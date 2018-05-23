@@ -30,4 +30,4 @@ class TestHistogram(unittest.TestCase):
         self.assertEqual(b.edge(),120)
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(verbosity=2)

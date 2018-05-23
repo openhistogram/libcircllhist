@@ -155,7 +155,7 @@ install:	install-headers install-libs
 install-python:
 	cd python && python setup.py install
 
-tests: test/histogram_test test/histogram_perf $(LUA_FFI)
+tests: test/histogram_test test/histogram_perf $(LUA_FFI) $(PYTHON_FFI)
 	test/runTest.sh
 
 tests-python:
@@ -166,7 +166,9 @@ clean:
 	rm -f $(LIBCIRCLLHIST) $(LIBCIRCLLHIST_V)
 	rm -f histogram_test
 	rm -f histogram_perl
+	rm -f circllhist.ffi.h
 	rm -f $(LUA_FFI)
+	rm -f $(PYTHON_FFI)
 
 Makefile.dep:
 	$(CC) -I. $(CPPFLAGS) $(CFLAGS) $(DEPFLAGS) *.c > Makefile.dep

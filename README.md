@@ -1,5 +1,7 @@
 # libcircllhist
 
+[![Build Status](https://travis-ci.org/circonus-labs/libcircllhist.svg?branch=master)](https://travis-ci.org/circonus-labs/libcircllhist)
+
 An implementation of Circonus log-linear histograms.
 
 ## Installing
