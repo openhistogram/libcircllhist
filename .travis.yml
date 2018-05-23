@@ -15,6 +15,7 @@ before_script:
   - sudo apt-get install luajit -y
 
 script:
+  - buildtools/install-dependencies.sh
   - autoconf
   - ./configure
   - make
