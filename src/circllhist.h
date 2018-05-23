@@ -195,6 +195,20 @@ API_EXPORT(histogram_t *) hist_compress_mbe(histogram_t *h, int8_t mbe);
 API_EXPORT(double) hist_approx_mean(const histogram_t *);
 //! Approximate the sum of all values stored in the histogram
 API_EXPORT(double) hist_approx_sum(const histogram_t *);
+//! Approximate the standard deviation of all values stored in the histogram
+API_EXPORT(double) hist_approx_stddev(const histogram_t *);
+//! Approximate the k-th moment of all values stored in the histogram
+//! \param hist
+//! \param k
+API_EXPORT(double) hist_approx_moment(const histogram_t *hist, double k);
+//! Returns the number of values in buckets that are entirely lower than or equal to threshold
+//! \param hist
+//! \param threshold
+API_EXPORT(uint64_t) hist_approx_count_below(const histogram_t *hist, double threshold);
+//! Returns the number of values in buckets that are entirely larger than or equal to threshold
+//! \param hist
+//! \param threshold
+API_EXPORT(uint64_t) hist_approx_count_above(const histogram_t *hist, double threshold);
 //! Approiximate n quantiles of all values stored in the histogram
 //! \param *q_in array of quantiles to comute
 //! \param nq length of quantile array

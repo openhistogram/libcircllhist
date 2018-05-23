@@ -512,6 +512,85 @@ hist_approx_sum(const histogram_t *hist) {
   return sum;
 }
 
+double
+hist_approx_stddev(const histogram_t *hist) {
+  int i;
+  double total_count = 0.0;
+  double s1 = 0.0;
+  double s2 = 0.0;
+  ASSERT_GOOD_HIST(hist);
+  if(hist->used == 0) return 0.0;
+  for(i=0; i<hist->used; i++) {
+    if(hist_bucket_isnan(hist->bvs[i].bucket)) continue;
+    double midpoint = hist_bucket_midpoint(hist->bvs[i].bucket);
+    double count = hist->bvs[i].count;
+    total_count += count;
+    s1 += midpoint * count;
+    s2 += pow(midpoint, 2.0) * count;
+  }
+  if(total_count == 0.0) return private_nan;
+  return sqrt(s2 / total_count - pow(s1 / total_count, 2.0));
+}
+
+double
+hist_approx_moment(const histogram_t *hist, double k) {
+  int i;
+  double total_count = 0.0;
+  double sk = 0.0;
+  ASSERT_GOOD_HIST(hist);
+  for(i=0; i<hist->used; i++) {
+    if(hist_bucket_isnan(hist->bvs[i].bucket)) continue;
+    double midpoint = hist_bucket_midpoint(hist->bvs[i].bucket);
+    double count = hist->bvs[i].count;
+    total_count += count;
+    sk += pow(midpoint, k) * count;
+  }
+  if(total_count == 0.0) return private_nan;
+  return sk / pow(total_count, k);
+}
+
+uint64_t
+hist_approx_count_below(const histogram_t *hist, double threshold) {
+  int i;
+  uint64_t running_count = 0;
+  ASSERT_GOOD_HIST(hist);
+  for(i=0; i<hist->used; i++) {
+    if(hist_bucket_isnan(hist->bvs[i].bucket)) continue;
+    double bucket_bound = hist_bucket_to_double(hist->bvs[i].bucket);
+    double bucket_upper;
+    if(bucket_bound < 0.0)
+      bucket_upper = bucket_bound;
+    else
+      bucket_upper = bucket_bound + hist_bucket_to_double_bin_width(hist->bvs[i].bucket);
+    if(bucket_upper <= threshold)
+      running_count += hist->bvs[i].count;
+    else
+      break;
+  }
+  return running_count;
+}
+
+uint64_t
+hist_approx_count_above(const histogram_t *hist, double threshold) {
+  int i;
+  ASSERT_GOOD_HIST(hist);
+  uint64_t running_count = hist_sample_count(hist);
+  for(i=0; i<hist->used; i++) {
+    if(hist_bucket_isnan(hist->bvs[i].bucket)) continue;
+    double bucket_bound = hist_bucket_to_double(hist->bvs[i].bucket);
+    double bucket_lower;
+    if(bucket_bound < 0.0)
+      bucket_lower = bucket_bound - hist_bucket_to_double_bin_width(hist->bvs[i].bucket);
+    else
+      bucket_lower = bucket_bound;
+    if(bucket_lower < threshold)
+      running_count -= hist->bvs[i].count;
+    else
+      break;
+  }
+  return running_count;
+}
+
 /* 0 success,
  * -1 (empty histogram),
  * -2 (out of order quantile request)
