@@ -486,6 +486,7 @@ hist_approx_mean(const histogram_t *hist) {
   int i;
   double divisor = 0.0;
   double sum = 0.0;
+  if(!hist) return private_nan;
   ASSERT_GOOD_HIST(hist);
   for(i=0; i<hist->used; i++) {
     if(hist_bucket_isnan(hist->bvs[i].bucket)) continue;
@@ -502,6 +503,7 @@ double
 hist_approx_sum(const histogram_t *hist) {
   int i;
   double sum = 0.0;
+  if(!hist) return 0.0;
   ASSERT_GOOD_HIST(hist);
   for(i=0; i<hist->used; i++) {
     if(hist_bucket_isnan(hist->bvs[i].bucket)) continue;
@@ -518,6 +520,7 @@ hist_approx_stddev(const histogram_t *hist) {
   double total_count = 0.0;
   double s1 = 0.0;
   double s2 = 0.0;
+  if(!hist) return private_nan;
   ASSERT_GOOD_HIST(hist);
   if(hist->used == 0) return 0.0;
   for(i=0; i<hist->used; i++) {
@@ -537,6 +540,7 @@ hist_approx_moment(const histogram_t *hist, double k) {
   int i;
   double total_count = 0.0;
   double sk = 0.0;
+  if(!hist) return private_nan;
   ASSERT_GOOD_HIST(hist);
   for(i=0; i<hist->used; i++) {
     if(hist_bucket_isnan(hist->bvs[i].bucket)) continue;
@@ -553,6 +557,7 @@ uint64_t
 hist_approx_count_below(const histogram_t *hist, double threshold) {
   int i;
   uint64_t running_count = 0;
+  if(!hist) return 0;
   ASSERT_GOOD_HIST(hist);
   for(i=0; i<hist->used; i++) {
     if(hist_bucket_isnan(hist->bvs[i].bucket)) continue;
@@ -573,6 +578,7 @@ hist_approx_count_below(const histogram_t *hist, double threshold) {
 uint64_t
 hist_approx_count_above(const histogram_t *hist, double threshold) {
   int i;
+  if(!hist) return 0;
   ASSERT_GOOD_HIST(hist);
   uint64_t running_count = hist_sample_count(hist);
   for(i=0; i<hist->used; i++) {
@@ -601,8 +607,15 @@ hist_approx_quantile(const histogram_t *hist, const double *q_in, int nq, double
   int i_q, i_b;
   double total_cnt = 0.0, bucket_width = 0.0,
          bucket_left = 0.0, lower_cnt = 0.0, upper_cnt = 0.0;
-  ASSERT_GOOD_HIST(hist);
+
   if(nq < 1) return 0; /* nothing requested, easy to satisfy successfully */
+
+  if(!hist) {
+    for(i_q=0;i_q<nq;i_q++) q_out[i_q] = private_nan;
+    return 0;
+  }
+
+  ASSERT_GOOD_HIST(hist);
 
   /* Sum up all samples from all the bins */
   for (i_b=0;i_b<hist->used;i_b++) {
@@ -868,6 +881,7 @@ uint64_t
 hist_sample_count(const histogram_t *hist) {
   int i;
   uint64_t total = 0, last = 0;
+  if(!hist) return 0;
   ASSERT_GOOD_HIST(hist);
   for(i=0;i<hist->used;i++) {
     last = total;
@@ -969,6 +983,7 @@ hist_subtract(histogram_t *tgt, const histogram_t * const *hist, int cnt) {
   ASSERT_GOOD_HIST(tgt);
   for(i=0;i<cnt;i++) {
     tgt_idx = src_idx = 0;
+    if(!hist[i]) continue;
     ASSERT_GOOD_HIST(hist[i]);
     while(tgt_idx < tgt->used && src_idx < hist[i]->used) {
       int cmp = hist_bucket_cmp(tgt->bvs[tgt_idx].bucket, hist[i]->bvs[src_idx].bucket);
@@ -1160,6 +1175,7 @@ hist_free(histogram_t *hist) {
 histogram_t *
 hist_compress_mbe(histogram_t *hist, int8_t mbe) {
   histogram_t *hist_compressed = hist_alloc();
+  if(!hist) return hist_compressed;
   int total = hist_bucket_count(hist);
   for(int idx=0; idx<total; idx++) {
     struct hist_bv_pair bv = hist->bvs[idx];
