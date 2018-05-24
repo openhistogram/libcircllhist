@@ -270,8 +270,9 @@ void simple_clear() {
 void accum_sub_test() {
   int i, j, samples = 0;
   histogram_t *tgt;
-  histogram_t *t[10];
+  histogram_t *t[10] = {NULL};
   for(i=0;i<10;i++) {
+    if(i==8) continue;
     t[i] = hist_alloc();
     for(j=0; j<100; j++) {
       hist_insert(t[i], (lrand48() % 100) + 10, 1);
@@ -558,6 +559,14 @@ int main() {
   T(simple_clear());
 
   T(issue_n());
+
+
+  T(is(isnan(hist_approx_mean(NULL))));
+  T(is(isnan(hist_approx_stddev(NULL))));
+  T(is(isnan(hist_approx_moment(NULL, 1))));
+  T(is(0 == hist_approx_sum(NULL)));
+  T(is(0 == hist_approx_count_below(NULL, 1)));
+  T(is(0 == hist_approx_count_above(NULL, 1)));
 
   printf("%d..%d\n", 1, tcount-1);
   return failed ? -1 : 0;
