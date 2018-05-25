@@ -69,6 +69,8 @@ static const hist_bucket_t hbnan = { (int8_t)0xff, 0 };
 #define ASSERT_GOOD_BUCKET(hb)
 #endif
 #define private_nan private_nan_union.private_nan_double_rep
+#define HIST_POSITIVE_MIN_I  1e-128
+#define HIST_NEGATIVE_MAX_I -1e-128
 
 static double power_of_ten[256] = {
   1, 10, 100, 1000, 10000, 100000, 1e+06, 1e+07, 1e+08, 1e+09, 1e+10,
@@ -595,6 +597,35 @@ hist_approx_count_above(const histogram_t *hist, double threshold) {
       break;
   }
   return running_count;
+}
+
+uint64_t
+hist_approx_count_nearby(const histogram_t *hist, double value) {
+  int i;
+  if(!hist) return 0;
+  ASSERT_GOOD_HIST(hist);
+  for(i=0; i<hist->used; i++) {
+    if(hist_bucket_isnan(hist->bvs[i].bucket)) continue;
+    double bucket_bound = hist_bucket_to_double(hist->bvs[i].bucket);
+    double bucket_lower, bucket_upper;
+    if(bucket_bound < 0.0) {
+      bucket_lower = bucket_bound - hist_bucket_to_double_bin_width(hist->bvs[i].bucket);
+      bucket_upper = bucket_bound;
+      if(bucket_lower < value && value <= bucket_upper)
+        return hist->bvs[i].count;
+    }
+    else if(bucket_bound == 0.0) {
+      if(HIST_NEGATIVE_MAX_I < value && value < HIST_POSITIVE_MIN_I)
+        return hist->bvs[i].count;
+    }
+    else {
+      bucket_lower = bucket_bound;
+      bucket_upper = bucket_bound + hist_bucket_to_double_bin_width(hist->bvs[i].bucket);
+      if(bucket_lower <= value && value < bucket_upper)
+        return hist->bvs[i].count;
+    }
+  }
+  return 0;
 }
 
 /* 0 success,

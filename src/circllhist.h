@@ -209,6 +209,10 @@ API_EXPORT(uint64_t) hist_approx_count_below(const histogram_t *hist, double thr
 //! \param hist
 //! \param threshold
 API_EXPORT(uint64_t) hist_approx_count_above(const histogram_t *hist, double threshold);
+//! Returns the number of samples in the histogram that are in the same bucket as the provided value
+//! \param hist
+//! \param value
+API_EXPORT(uint64_t) hist_approx_count_nearby(const histogram_t *hist, double value);
 //! Approiximate n quantiles of all values stored in the histogram
 //! \param *q_in array of quantiles to comute
 //! \param nq length of quantile array

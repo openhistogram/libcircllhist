@@ -104,6 +104,10 @@ class Circllhist(object):
         "Returns the number of values in buckets that are entirely larger than or equal to threshold"
         return ffi.C.hist_approx_count_above(self._h, threshold)
 
+    def count_nearby(self, value):
+        "Returns the number of samples in the histogram that are in the same bucket as the provided value"
+        return ffi.C.hist_approx_count_nearby(self._h, value)
+
     def quantile(self, q):
         "Returns an approximation of the q-quantile"
         q_in = ffi.ffi.new("double*", q)
