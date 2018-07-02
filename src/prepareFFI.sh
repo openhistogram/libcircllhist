@@ -22,7 +22,7 @@ cat |\
   $GREP -v -F '/* FFI_SKIP */' |\
   $GREP -v "^$" |\
   $SED 's|//.*$||' |\
-  $EGREP -v "#if|#endif|#define|#include" |\
+  $EGREP -v "#if|#endif|#define|#include|SSIZE_T" |\
   $SED 's/u_int/uint/g' |\
   $SED 's/API_EXPORT(\([^\)]*\))/\1/g' |\
   $AWK '/typedef struct histogram histogram_t;/ {print "typedef long int ssize_t;"} /./{print}'
