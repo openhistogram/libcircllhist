@@ -36,6 +36,11 @@
 #ifndef CIRCLLHIST_H
 #define CIRCLLHIST_H
 
+#if defined(WIN32)
+#include <basetsd.h>
+typedef SSIZE_T ssize_t;
+#endif
+
 #ifdef __cplusplus
 extern "C" { /* FFI_SKIP */
 #endif

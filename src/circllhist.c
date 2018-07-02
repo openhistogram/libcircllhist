@@ -35,10 +35,13 @@
 #include <errno.h>
 #include <sys/types.h>
 #include <string.h>
-#include <sys/socket.h>
 #include <math.h>
-#include <arpa/inet.h>
 #include <ctype.h>
+
+#if !defined(WIN32)
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#endif
 
 #include "circllhist.h"
 
@@ -115,10 +118,19 @@ struct hist_flevel {
 };
 
 //! A bucket-count pair
+#if defined(WIN32)
+#pragma pack(push, 1)
+struct hist_bv_pair {
+  hist_bucket_t bucket;
+  uint64_t count;
+};
+#pragma pack(pop)
+#else
 struct hist_bv_pair {
   hist_bucket_t bucket;
   uint64_t count;
 }__attribute__((packed));
+#endif
 
 //! The histogram structure
 //! Internals are regarded private and might change with version.
@@ -1199,7 +1211,7 @@ hist_free(histogram_t *hist) {
     struct histogram_fast *hfast = (struct histogram_fast *)hist;
     for(i=0;i<256;i++) a->free(hfast->faster[i]);
   }
-  
+
   a->free(hist);
 }
 
