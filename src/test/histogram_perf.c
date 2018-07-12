@@ -46,7 +46,7 @@ struct sval *buildNIvals(int n) {
   return vals;
 }
 
-const int iters[] = { 100, 10000, 1000000 };
+const int iters[] = { 100, 10000, 100000 };
 const int sizes[] = { 31, 127, 255 };
 int main() {
   int i, s;
@@ -64,7 +64,7 @@ int main() {
 { // double
       cnt = 0;
       hist = NULL;
-      printf("[%s] Running %d double iters over %d values in %d bins...\n",
+      printf("%s,%d,%d,%d,",
              (ai%2 == 0) ? "normal" : "fast",
              iter, (size*iter), size);
       double *vals = buildNvals(size);
@@ -79,8 +79,8 @@ int main() {
       double elapsed = finish.tv_sec - start.tv_sec;
       elapsed += (finish.tv_usec/1000000.0) - (start.tv_usec/1000000.0);
       if(cnt != 0)
-        printf("ops: %ld, time: %gs, time-per-op: %0.2fns\n",
-             cnt, elapsed, (elapsed / (double)cnt) * 1000000000.0);
+        printf("%0.2f\n",
+               (elapsed / (double)cnt) * 1000000000.0);
       else 
         printf("cannot calculate benchmark, no work done!\n");
       hist_free(hist);
@@ -89,7 +89,7 @@ int main() {
 { // int
       hist = NULL;
       cnt = 0;
-      printf("[%s] Running %d int iters over %d values in %d bins...\n",
+      printf("%s,%d,%d,%d,",
              (ai%2 == 0) ? "normal" : "fast",
              iter, (size*iter), size);
       struct sval *vals = buildNIvals(size);
@@ -104,8 +104,8 @@ int main() {
       double elapsed = finish.tv_sec - start.tv_sec;
       elapsed += (finish.tv_usec/1000000.0) - (start.tv_usec/1000000.0);
       if(cnt != 0)
-        printf("ops: %ld, time: %gs, time-per-op: %0.2fns\n",
-             cnt, elapsed, (elapsed / (double)cnt) * 1000000000.0);
+        printf("%0.2f\n",
+               (elapsed / (double)cnt) * 1000000000.0);
       else
         printf("cannot calculate benchmark, no work done!\n");
       hist_free(hist);

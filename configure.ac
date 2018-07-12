@@ -43,7 +43,7 @@ SHLDFLAGS="$LDFLAGS"
 DOTSO=.so
 
 if test "x$COPT" = "x" ; then
-	COPT="-O5"
+	COPT="-O5 -DNDEBUG"
 fi
 
 case $host in

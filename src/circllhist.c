@@ -60,6 +60,7 @@ static const hist_bucket_t hbnan = { (int8_t)0xff, 0 };
 
 #define MAX_HIST_BINS (2 + 2 * 90 * 256)
 #ifndef NDEBUG
+#define unlikely(x) (x)
 #define ASSERT_GOOD_HIST(h) do { \
   if(h) { \
     assert(h->allocd <= MAX_HIST_BINS); \
@@ -68,6 +69,7 @@ static const hist_bucket_t hbnan = { (int8_t)0xff, 0 };
 } while(0)
 #define ASSERT_GOOD_BUCKET(hb) assert(hist_bucket_is_valid(hb))
 #else
+#define unlikely(x) __builtin_expect(!!(x), 0)
 #define ASSERT_GOOD_HIST(h)
 #define ASSERT_GOOD_BUCKET(hb)
 #endif
@@ -727,22 +729,22 @@ hist_bucket_t
 int_scale_to_hist_bucket(int64_t value, int scale) {
   hist_bucket_t hb = { 0, 0 };
   int sign = 1;
-  if(value == 0) return hb;
+  if(unlikely(value == 0)) return hb;
   scale++;
-  if(value < 0) {
+  if(unlikely(value < 0)) {
     value = 0 - value;
     sign = -1;
   }
-  if(value < 10) {
+  if(unlikely(value < 10)) {
     value *= 10;
     scale -= 1;
   }
-  while(value >= 100) {
+  while(unlikely(value >= 100)) {
     value /= 10;
     scale++;
   }
-  if(scale < -128) return hb;
-  if(scale > 127) return hbnan;
+  if(unlikely(scale < -128)) return hb;
+  if(unlikely(scale > 127)) return hbnan;
   hb.val = sign * value;
   hb.exp = scale;
   ASSERT_GOOD_BUCKET(hb);
@@ -753,8 +755,9 @@ hist_bucket_t
 double_to_hist_bucket(double d) {
   hist_bucket_t hb = { (int8_t)0xff, 0 }; // NaN
   assert(private_nan != 0);
-  if(isnan(d) || isinf(d)) return hb;
-  else if(d==0) hb.val = 0;
+  if(unlikely(isnan(d))) return hb;
+  if(unlikely(isinf(d))) return hb;
+  else if(unlikely(d==0)) hb.val = 0;
   else {
     int big_exp;
     uint8_t *pidx;
@@ -762,8 +765,8 @@ double_to_hist_bucket(double d) {
     d = fabs(d);
     big_exp = (int32_t)floor(log10(d));
     hb.exp = (int8_t)big_exp;
-    if(hb.exp != big_exp) { /* we rolled */
-      if(big_exp >= 0) return hbnan;
+    if(unlikely(hb.exp != big_exp)) { /* we rolled */
+      if(unlikely(big_exp >= 0)) return hbnan;
       hb.val = 0;
       hb.exp = 0;
       return hb;
@@ -776,7 +779,7 @@ double_to_hist_bucket(double d) {
     // by allowing an error margin (in the order or magnitude
     // of the expected rounding errors of the above transformations)
     hb.val = sign * (int)floor(d + 1e-13);
-    if(hb.val == 100 || hb.val == -100) {
+    if(unlikely(hb.val == 100 || hb.val == -100)) {
       if (hb.exp < 127) {
         hb.val /= 10;
         hb.exp++;
@@ -784,12 +787,12 @@ double_to_hist_bucket(double d) {
         return hbnan;
       }
     }
-    if(hb.val == 0) {
+    if(unlikely(hb.val == 0)) {
       hb.exp = 0;
       return hb;
     }
-    if(!((hb.val >= 10 && hb.val < 100) ||
-         (hb.val <= -10 && hb.val > -100))) {
+    if(unlikely(!((hb.val >= 10 && hb.val < 100) ||
+                (hb.val <= -10 && hb.val > -100)))) {
       return hbnan;
     }
   }
@@ -806,7 +809,7 @@ hist_internal_find(histogram_t *hist, hist_bucket_t hb, int *idx) {
   int rv = -1, l = 0, r = hist->used - 1;
   *idx = 0;
   ASSERT_GOOD_HIST(hist);
-  if(hist->used == 0) return 0;
+  if(unlikely(hist->used == 0)) return 0;
   if(hist->fast) {
     struct histogram_fast *hfast = (struct histogram_fast *)hist;
     struct hist_flevel *faster = (struct hist_flevel *)&hb;
@@ -831,7 +834,9 @@ hist_internal_find(histogram_t *hist, hist_bucket_t hb, int *idx) {
   if(rv == 0) return 1;   /* this is it */
   if(rv < 0) return 0;    /* it goes here (before) */
   (*idx)++;               /* it goes after here */
+#ifndef NDEBUG
   assert(*idx >= 0 && *idx <= hist->used);
+#endif
   return 0;
 }
 
@@ -839,14 +844,14 @@ uint64_t
 hist_insert_raw(histogram_t *hist, hist_bucket_t hb, uint64_t count) {
   int found, idx;
   ASSERT_GOOD_HIST(hist);
-  if(hist->bvs == NULL) {
+  if(unlikely(hist->bvs == NULL)) {
     hist->bvs = hist->allocator->malloc(DEFAULT_HIST_SIZE * sizeof(*hist->bvs));
     hist->allocd = DEFAULT_HIST_SIZE;
   }
   found = hist_internal_find(hist, hb, &idx);
-  if(!found) {
+  if(unlikely(!found)) {
     int i;
-    if(hist->used == hist->allocd) {
+    if(unlikely(hist->used == hist->allocd)) {
       /* A resize is required */
       histogram_t dummy;
       dummy.bvs = hist->allocator->malloc((hist->allocd + DEFAULT_HIST_SIZE) *
@@ -884,7 +889,7 @@ hist_insert_raw(histogram_t *hist, hist_bucket_t hb, uint64_t count) {
   else { // found
     /* Just need to update the counters */
     uint64_t newval = hist->bvs[idx].count + count;
-    if(newval < hist->bvs[idx].count) /* we rolled */
+    if(unlikely(newval < hist->bvs[idx].count)) /* we rolled */
       newval = ~(uint64_t)0;
     count = newval - hist->bvs[idx].count;
     hist->bvs[idx].count = newval;
