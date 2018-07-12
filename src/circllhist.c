@@ -732,7 +732,8 @@ int_scale_to_hist_bucket(int64_t value, int scale) {
   if(unlikely(value == 0)) return hb;
   scale++;
   if(unlikely(value < 0)) {
-    value = 0 - value;
+    if(unlikely(value == INT64_MIN)) value = INT64_MAX;
+    else value = 0 - value;
     sign = -1;
   }
   if(unlikely(value < 10)) {

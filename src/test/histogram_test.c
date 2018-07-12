@@ -56,15 +56,21 @@ bool double_equals(double a, double b) {
   if(fabs(r) < 0.0001) return true;
   return false;
 }
+
 void bucket_tests() {
   hist_bucket_t b, o;
   char hbstr[HIST_BUCKET_MAX_STRING_SIZE] = {0};
 
-  int_scale_to_hist_bucket(INT64_MIN, 1);
-  int_scale_to_hist_bucket(INT64_MAX, 1);
-  int_scale_to_hist_bucket(INT64_MIN, -127);
-  int_scale_to_hist_bucket(INT64_MAX, -200);
-  int_scale_to_hist_bucket(10, -128);
+  b = int_scale_to_hist_bucket(INT64_MIN, 1);
+  T(is(b.val == -92 && b.exp == 19));
+  b = int_scale_to_hist_bucket(INT64_MAX, 1);
+  T(is(b.val == 92 && b.exp == 19));
+  b = int_scale_to_hist_bucket(INT64_MIN, -127);
+  T(is(b.val == -92 && b.exp == -109));
+  b = int_scale_to_hist_bucket(INT64_MAX, -200);
+  T(is(b.val == 0 && b.exp == 0));
+  b = int_scale_to_hist_bucket(10, -128);
+  T(is(b.val == 10 && b.exp == -127));
 
   b = int_scale_to_hist_bucket(0,0);
   T(is(b.val == 0 && b.exp == 0));
