@@ -38,9 +38,11 @@ class Circllbin(object):
         "Returns the edge of the histogram bucket that is closer to zero"
         return ffi.C.hist_bucket_to_double(self._b)
 
+    @property
     def exp(self):
         return self._b.exp
 
+    @property
     def val(self):
         return self._b.val
 
@@ -49,9 +51,12 @@ class Circllhist(object):
 
     __slots__ = ("_h",)
 
-    def __init__(self, h=None):
+    def __init__(self, h=None, gc=False):
         if h:
-            self._h = h
+            if gc:
+                self._h = ffi.ffi.gc(h, ffi.C.hist_free)
+            else:
+                self._h = h
         else:
             self._h = ffi.ffi.gc(ffi.C.hist_alloc(), ffi.C.hist_free)
 
@@ -163,5 +168,4 @@ class Circllhist(object):
         - mbe the Minimum Bucket Exponent
         - return the compressed histogram as new value
         """
-        h_compressed = ffi.ffi.gc(ffi.C.hist_compress_mbe(self._h, mbe), ffi.C.hist_free)
-        return Circllhist(h=h_compressed)
+        return Circllhist(ffi.C.hist_compress_mbe(self._h, mbe), gc=True)
