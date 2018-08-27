@@ -49,8 +49,11 @@ class Circllhist(object):
 
     __slots__ = ("_h",)
 
-    def __init__(self):
-        self._h = ffi.ffi.gc(ffi.C.hist_alloc(), ffi.C.hist_free)
+    def __init__(self, h=None):
+        if h:
+            self._h = h
+        else:
+            self._h = ffi.ffi.gc(ffi.C.hist_alloc(), ffi.C.hist_free)
 
     def count(self):
         "Returns the number of samples stored in the histogram"
@@ -150,3 +153,15 @@ class Circllhist(object):
 
     def __str__(self):
         return json.dumps(self.to_dict())
+
+    def compress_mbe(self, mbe):
+        """
+        Compress histogram by squshing together adjacent buckets
+
+        This compression is lossy. mean/quantiles will be affected by compression.
+        Intended use cases is visualization.
+        - mbe the Minimum Bucket Exponent
+        - return the compressed histogram as new value
+        """
+        h_compressed = ffi.ffi.gc(ffi.C.hist_compress_mbe(self._h, mbe), ffi.C.hist_free)
+        return Circllhist(h=h_compressed)
