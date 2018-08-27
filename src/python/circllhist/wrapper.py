@@ -38,14 +38,27 @@ class Circllbin(object):
         "Returns the edge of the histogram bucket that is closer to zero"
         return ffi.C.hist_bucket_to_double(self._b)
 
+    @property
+    def exp(self):
+        return self._b.exp
+
+    @property
+    def val(self):
+        return self._b.val
 
 class Circllhist(object):
     "Wraps a log-linear histogram"
 
     __slots__ = ("_h",)
 
-    def __init__(self):
-        self._h = ffi.ffi.gc(ffi.C.hist_alloc(), ffi.C.hist_free)
+    def __init__(self, h=None, gc=False):
+        if h:
+            if gc:
+                self._h = ffi.ffi.gc(h, ffi.C.hist_free)
+            else:
+                self._h = h
+        else:
+            self._h = ffi.ffi.gc(ffi.C.hist_alloc(), ffi.C.hist_free)
 
     def count(self):
         "Returns the number of samples stored in the histogram"
@@ -145,3 +158,14 @@ class Circllhist(object):
 
     def __str__(self):
         return json.dumps(self.to_dict())
+
+    def compress_mbe(self, mbe):
+        """
+        Compress histogram by squshing together adjacent buckets
+
+        This compression is lossy. mean/quantiles will be affected by compression.
+        Intended use cases is visualization.
+        - mbe the Minimum Bucket Exponent
+        - return the compressed histogram as new value
+        """
+        return Circllhist(ffi.C.hist_compress_mbe(self._h, mbe), gc=True)
