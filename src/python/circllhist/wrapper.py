@@ -38,6 +38,11 @@ class Circllbin(object):
         "Returns the edge of the histogram bucket that is closer to zero"
         return ffi.C.hist_bucket_to_double(self._b)
 
+    def exp(self):
+        return self._b.exp
+
+    def val(self):
+        return self._b.val
 
 class Circllhist(object):
     "Wraps a log-linear histogram"
