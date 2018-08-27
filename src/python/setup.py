@@ -1,7 +1,12 @@
 from setuptools import setup, find_packages
+
+with open('README.md') as file:
+    long_description = file.read()
+
 setup(
     name="circllhist",
-    version="0.2.1",
+    long_description=long_description,
+    version="0.2.2",
     description="Circonus log-linear histogram library",
     maintainer="Heinrich Hartmann",
     maintainer_email="heinrich.hartmann@circonus.com",
