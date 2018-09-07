@@ -28,12 +28,15 @@ class Circllbin(object):
         ffi.C.hist_bucket_to_string(self._b, buf)
         return str_ascii(ffi.ffi.string(buf))
 
+    @property
     def width(self):
         return ffi.C.hist_bucket_to_double_bin_width(self._b)
 
+    @property
     def midpoint(self):
         return ffi.C.hist_bucket_midpoint(self._b)
 
+    @property
     def edge(self):
         "Returns the edge of the histogram bucket that is closer to zero"
         return ffi.C.hist_bucket_to_double(self._b)
