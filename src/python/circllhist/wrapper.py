@@ -4,6 +4,7 @@ The circllhist python module provides a wrapper around the libcircllhist data st
 
 import sys
 import json
+import math
 import circllhist.ffi as ffi
 
 if sys.version_info[0] == 3:
@@ -176,3 +177,54 @@ class Circllhist(object):
         - return the compressed histogram as new value
         """
         return Circllhist(ffi.C.hist_compress_mbe(self._h, mbe), gc=True)
+
+    def plot(self, *args, ax=None, mbe=None, **kwargs):
+        """
+        Plot histogram using matplotlib.
+        Depends on matplotlib being available.
+        Retruns an axes object.
+
+        Hint: Use H.plot().set_xlim(x_min, x_max) to adjust value range.
+
+        mbe-compression is applied before plotting so squash bins which are deemed to small.
+        Use the mbe parameter to tune the minimal bin exponent.
+        """
+        # Other functions will work fine without having matplotlib installed
+        # so we keep the import local to this function.
+        from matplotlib import pyplot as plt
+        d_min = self.quantile(.1)
+        d_max = self.quantile(.9)
+        d_range = d_max - d_min
+        if not mbe:
+            mbe = math.floor(math.log10(d_range/100))
+        mb = 10 ** mbe
+        H = self.compress_mbe(mbe)
+        if not ax:
+            x_min = d_min - 0.10*d_range - mb
+            x_max = d_max + 0.10*d_range + mb
+            ax = plt.subplot(1,1,1)
+            ax.set_xlim(x_min, x_max)
+        x=[] # midpoints
+        h=[] # height
+        w=[] # widths
+        for b, c in H:
+            c = float(c)
+            if b.exp == 0:
+                wdt = 2*mb # 0 bucket, spans -mb ... +mb
+                x.append(0)
+                w.append(wdt)
+                h.append(c/wdt)
+            elif b.exp == mbe:
+                # mbe buckets are scaled by a factor of 10
+                sgn = 1 if b.val > 0 else -1
+                wdt = b.width * 10
+                mid = b.edge + sgn * wdt/2
+                x.append(mid)
+                w.append(wdt)
+                h.append(c/wdt)
+            else:
+                x.append(b.midpoint)
+                w.append(b.width)
+                h.append(c/b.width)
+        ax.bar(x, h, w, **kwargs)
+        return ax
