@@ -178,7 +178,7 @@ class Circllhist(object):
         """
         return Circllhist(ffi.C.hist_compress_mbe(self._h, mbe), gc=True)
 
-    def plot(self, *args, ax=None, mbe=None, **kwargs):
+    def plot(self, **kwargs):
         """
         Plot histogram using matplotlib.
         Depends on matplotlib being available.
@@ -192,6 +192,8 @@ class Circllhist(object):
         # Other functions will work fine without having matplotlib installed
         # so we keep the import local to this function.
         from matplotlib import pyplot as plt
+        ax = kwargs.get('ax')
+        mbe = kwargs.get('mbe')
         d_min = self.quantile(.1)
         d_max = self.quantile(.9)
         d_range = d_max - d_min
