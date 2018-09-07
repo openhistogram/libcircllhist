@@ -77,6 +77,7 @@ class Circllhist(object):
         ffi.C.hist_insert_intscale(self._h, val, scale, count)
 
     def merge(self, hist):
+        "Merge the given histogram into self."
         p = ffi.ffi.new("histogram_t **")
         p[0] = hist._h
         ffi.C.hist_accumulate(self._h, p, 1)
@@ -137,12 +138,14 @@ class Circllhist(object):
 
     @classmethod
     def from_dict(cls, d):
+        "Create a histogram from a dict of the form bin => count"
         h = cls()
         for k, v in d.items():
             h.insert(float(k), v)
         return h
 
     def to_b64(self):
+        "Returns a base64 encoded binary representation of the histogram"
         sz = ffi.C.hist_serialize_b64_estimate(self._h)
         buf = ffi.ffi.new("char[]", sz)
         ffi.C.hist_serialize_b64(self._h, buf, sz)
@@ -150,6 +153,7 @@ class Circllhist(object):
 
     @classmethod
     def from_b64(cls, b64):
+        "Create from a binary base64 encoded string"
         h = cls()
         buf = b64.encode("ASCII")
         sz = len(buf)
