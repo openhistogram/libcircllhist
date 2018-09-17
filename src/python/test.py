@@ -25,9 +25,9 @@ class TestHistogram(unittest.TestCase):
 
     def test_bin(self):
         b = Circllbin.from_number(123.3)
-        self.assertEqual(b.width(),10)
-        self.assertEqual(b.midpoint(),125)
-        self.assertEqual(b.edge(),120)
+        self.assertEqual(b.width,10)
+        self.assertEqual(b.midpoint,125)
+        self.assertEqual(b.edge,120)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
