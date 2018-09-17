@@ -4,6 +4,16 @@ This package requires the libcircllhist C library to be installed on your system
 
 https://github.com/circonus-labs/libcircllhist/
 
+The bindings itself can be installed via pip:
+
+    pip install circllhist
+
+Or manually via
+
+    python setup.py install
+
+from this folder.
+
 ## Usage Example
 
 ```
