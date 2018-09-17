@@ -176,24 +176,24 @@ class Circllhist(object):
         - mbe the Minimum Bucket Exponent
         - return the compressed histogram as new value
         """
-        return Circllhist(ffi.C.hist_compress_mbe(self._h, mbe), gc=True)
+        return Circllhist(ffi.C.hist_compress_mbe(self._h, int(mbe)), gc=True)
 
     def plot(self, **kwargs):
         """
         Plot histogram using matplotlib.
         Depends on matplotlib being available.
-        Retruns an axes object.
+        Returns an axes object.
 
         Hint: Use H.plot().set_xlim(x_min, x_max) to adjust value range.
 
-        mbe-compression is applied before plotting so squash bins which are deemed to small.
+        mbe-compression is applied before plotting to squash bins which are deemed too small.
         Use the mbe parameter to tune the minimal bin exponent.
         """
         # Other functions will work fine without having matplotlib installed
         # so we keep the import local to this function.
         from matplotlib import pyplot as plt
-        ax = kwargs.get('ax')
-        mbe = kwargs.get('mbe')
+        ax = kwargs.pop('ax', None)
+        mbe = kwargs.pop('mbe', None)
         d_min = self.quantile(.1)
         d_max = self.quantile(.9)
         d_range = d_max - d_min
