@@ -11,8 +11,8 @@ ${STDIN}
 """)
 C = None
 for path in [ # Search for libcircllhist.so
-    "/opt/circonus/lib/libcircllhist.so", # 1. vendor path
-    "./libcircllhist.so", # 2. cwd
+    "./libcircllhist.so", # 1. cwd
+    "/opt/circonus/lib/libcircllhist.so", # 2. vendor path
     "libcircllhist.so" # 3. system paths via ld.so
     ]:
     try:
