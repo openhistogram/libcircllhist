@@ -38,7 +38,7 @@ function tester.test2_single_bucket()
   end
 
   writer("  single bucket, approx mean...")
-  if histo_lib.hist_approx_mean(histo) == 3.15 then
+  if histo_lib.hist_approx_mean(histo) == (3.1 + 0.1 * (3.1 / (3.1+3.2))) then
     success()
   else
     fail()
