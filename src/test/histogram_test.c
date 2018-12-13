@@ -497,10 +497,63 @@ static void issue_n() {
   isf(out[0] == 2, " min==2.0 != %g", out[0]);
 }
 
+void
+iq_test() {
+  int size = 10;
+  double in[10] = {-200,-100,0,1,1.001,1.1,1.2,2,3,4};
+  double out[10];
+  memset(&out, 0, sizeof(out));
+  int rc;
+  // NULL hist: no inverse quantiles
+  rc = hist_approx_inverse_quantile(NULL, in, size, out);
+  is(rc == 0);
+  for (int i=0;i<size;i++) {
+    if(isnan(out[i])) { ok(); }
+  }
+  // empty hist: no inverse quantiles
+  double a1[] = {};
+  memset(&out, 0, sizeof(out));
+  histogram_t *h1 = build(a1, sizeof(a1)/sizeof(double));
+  rc = hist_approx_inverse_quantile(h1, in, size, out);
+  T(is(rc == 0));
+  for (int i = 0; i < size; i++) {
+    if(isnan(out[i])) { ok(); }
+  }
+  // negative hist
+  memset(&out, 0, sizeof(out));
+  double a2[] = { -100 };
+  histogram_t *h2 = build(a2, sizeof(a2)/sizeof(double));
+  rc = hist_approx_inverse_quantile(h2, in, size, out);
+  T(is(rc == 0));
+  T(is(out[0] == 0));
+  T(is(out[1] == 1));
+  T(is(out[2] == 1));
+  // zero hist
+  memset(&out, 0, sizeof(out));
+  double a3[] = { 0 };
+  histogram_t *h3 = build(a3, sizeof(a3)/sizeof(double));
+  rc = hist_approx_inverse_quantile(h3, in, size, out);
+  T(is(rc == 0));
+  T(is(out[1] == 0));
+  T(is(out[2] == 0.5));
+  T(is(out[3] == 1));
+  // normal hist
+  memset(&out, 0, sizeof(out));
+  double a4[] = { 1,2,3 };
+  histogram_t *h4 = build(a4, sizeof(a4)/sizeof(double));
+  rc = hist_approx_inverse_quantile(h4, in, size, out);
+  T(is(rc == 0));
+  T(is(double_equals(out[4], 1./300)));
+  T(is(double_equals(out[5], 1./3)));
+  T(is(double_equals(out[6], 1./3)));
+  T(is(double_equals(out[7], 1./3)));
+  T(is(double_equals(out[8], 2./3)));
+  T(is(double_equals(out[9], 1)));
+}
+
 int main() {
   srand48(time(NULL));
   bucket_tests();
-
   T(test1(43.3, 43, 1));
   T(test1(99.9, 99, 1));
   T(test1(10, 10, 1));
@@ -514,6 +567,9 @@ int main() {
   T(test1(-987324, -980000, -10000));
 
   halloc = hist_alloc;
+
+  iq_test();
+  
   for(int ai=0; ai<2; ai++) {
     double s1[] = { 0.123, 0, 0.43, 0.41, 0.415, 0.2201, 0.3201, 0.125, 0.13 };
     T(mean_test(s1, 9, 0.24444));
@@ -565,7 +621,6 @@ int main() {
   T(simple_clear());
 
   T(issue_n());
-
 
   T(is(isnan(hist_approx_mean(NULL))));
   T(is(isnan(hist_approx_stddev(NULL))));
