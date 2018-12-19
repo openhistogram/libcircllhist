@@ -1309,10 +1309,11 @@ hist_approx_inverse_quantile(const histogram_t *hist, const double *in, int in_s
     hist_bucket_t bucket = hist->bvs[b_idx].bucket;
     uint64_t count = hist->bvs[b_idx].count;
     if(!hist_bucket_isnan(bucket)){
+      double bucket_size = hist_bucket_to_double_bin_width(bucket);
       double bucket_lower, bucket_upper;
       double bucket_bound = hist_bucket_to_double(bucket);
       if(bucket_bound < 0.0) {
-        bucket_lower = bucket_bound - hist_bucket_to_double_bin_width(bucket);
+        bucket_lower = bucket_bound - bucket_size;
         bucket_upper = bucket_bound;
       }
       else if(bucket_bound == 0.0) {
@@ -1321,15 +1322,21 @@ hist_approx_inverse_quantile(const histogram_t *hist, const double *in, int in_s
       }
       else {
         bucket_lower = bucket_bound;
-        bucket_upper = bucket_bound + hist_bucket_to_double_bin_width(bucket);
+        bucket_upper = bucket_bound + bucket_size;
       }
       while(threshold < bucket_lower) {
         out[in_idx] = (double) count_below / total_cnt;
         NEXT_THRESHOLD;
       }
       while(threshold < bucket_upper) {
-        double position_ratio = (threshold - bucket_lower) / (bucket_upper - bucket_lower);
-        out[in_idx] = (double) (count_below + position_ratio * count) / total_cnt;
+        if(bucket_size > 0.0) {
+          double position_ratio = (threshold - bucket_lower) / (bucket_upper - bucket_lower);
+          out[in_idx] = (double) (count_below + position_ratio * count) / total_cnt;
+        }
+        else {
+          // the 0-bucket case
+          out[in_idx] = (double) count_below / total_cnt;
+        }
         NEXT_THRESHOLD;
       }
       count_below += count;

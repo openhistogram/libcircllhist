@@ -226,7 +226,7 @@ API_EXPORT(int) hist_approx_quantile(const histogram_t *, const double *q_in, in
 //! Approiximate n inverse quantiles (ratio below threshold) of all values stored in the histogram
 //! \param *iq_in array of inverse quantiles to compute
 //! \param niq length of inverse quantile array
-//! \param *qi_out pre-allocated array where results shall be written to
+//! \param *iq_out pre-allocated array where results shall be written to
 API_EXPORT(int) hist_approx_inverse_quantile(const histogram_t *, const double *iq_in, int niq, double *iq_out);
 
 #ifdef __cplusplus
