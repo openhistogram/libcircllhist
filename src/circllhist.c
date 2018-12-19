@@ -1268,3 +1268,76 @@ hist_bucket_to_string(hist_bucket_t hb, char *buf) {
     return 8;
   }
 }
+
+/* 0 success
+ * -2 (out of order quantile request)
+ */
+int
+hist_approx_inverse_quantile(const histogram_t *hist, const double *in, int in_size, double *out) {
+  if(in_size < 1) { /* nothing requested, easy to satisfy successfully */
+    return 0;
+  }
+  for(int i=0;i<in_size;i++) {
+    // fill output with sensible default
+    out[i] = private_nan;
+    // make sure input quantiles are in order
+    if(i>0 && in[i-1] > in[i]) {
+      return -2;
+    }
+  }
+  if(!hist) {
+    return 0;
+  }
+  ASSERT_GOOD_HIST(hist);
+  /* Sum up all samples from all the bins */
+  uint64_t total_cnt = 0;
+  for (int i=0;i<hist->used;i++) {
+    if(hist_bucket_isnan(hist->bvs[i].bucket)) continue;
+    total_cnt += hist->bvs[i].count;
+  }
+  if(total_cnt == 0) return 0; // all ratios will be NAN
+  // Compute inverse percentiles
+  uint64_t count_below = 0;
+  int in_idx=0;
+  double threshold = in[in_idx];
+#define NEXT_THRESHOLD do {                           \
+  in_idx += 1;                                        \
+  if(in_idx < in_size) threshold = in[in_idx];        \
+  else return 0;                                      \
+} while(0)
+  for(int b_idx=0;b_idx<hist->used;b_idx++) {
+    hist_bucket_t bucket = hist->bvs[b_idx].bucket;
+    uint64_t count = hist->bvs[b_idx].count;
+    if(!hist_bucket_isnan(bucket)){
+      double bucket_lower, bucket_upper;
+      double bucket_bound = hist_bucket_to_double(bucket);
+      if(bucket_bound < 0.0) {
+        bucket_lower = bucket_bound - hist_bucket_to_double_bin_width(bucket);
+        bucket_upper = bucket_bound;
+      }
+      else if(bucket_bound == 0.0) {
+        bucket_lower = HIST_NEGATIVE_MAX_I;
+        bucket_upper = HIST_POSITIVE_MIN_I;
+      }
+      else {
+        bucket_lower = bucket_bound;
+        bucket_upper = bucket_bound + hist_bucket_to_double_bin_width(bucket);
+      }
+      while(threshold < bucket_lower) {
+        out[in_idx] = (double) count_below / total_cnt;
+        NEXT_THRESHOLD;
+      }
+      while(threshold < bucket_upper) {
+        double position_ratio = (threshold - bucket_lower) / (bucket_upper - bucket_lower);
+        out[in_idx] = (double) (count_below + position_ratio * count) / total_cnt;
+        NEXT_THRESHOLD;
+      }
+      count_below += count;
+    }
+  } // for(b_idx < hist->used)
+  // No more bins left; Fill in remaining entries with 1
+  for(int i=in_idx;i<in_size;i++){
+    out[i] = 1;
+  }
+  return 0;
+}
