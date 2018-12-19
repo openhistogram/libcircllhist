@@ -535,7 +535,7 @@ iq_test() {
   rc = hist_approx_inverse_quantile(h3, in, size, out);
   T(is(rc == 0));
   T(is(out[1] == 0));
-  T(is(out[2] == 0.5));
+  T(is(out[2] == 0));
   T(is(out[3] == 1));
   // normal hist
   memset(&out, 0, sizeof(out));
