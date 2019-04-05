@@ -1115,8 +1115,10 @@ void
 hist_clear(histogram_t *hist) {
   int i;
   ASSERT_GOOD_HIST(hist);
+  // just to be sure, clear the counts
   for(i=0;i<hist->used;i++)
     hist->bvs[i].count = 0;
+  hist->used = 0;
   if(hist->fast) {
     struct histogram_fast *hfast = (struct histogram_fast *)hist;
     for(i=0;i<256;i++) {
