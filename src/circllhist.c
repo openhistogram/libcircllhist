@@ -542,7 +542,6 @@ hist_approx_stddev(const histogram_t *hist) {
   double s2 = 0.0;
   if(!hist) return private_nan;
   ASSERT_GOOD_HIST(hist);
-  if(hist->used == 0) return 0.0;
   for(i=0; i<hist->used; i++) {
     if(hist_bucket_isnan(hist->bvs[i].bucket)) continue;
     double midpoint = hist_bucket_midpoint(hist->bvs[i].bucket);
