@@ -713,16 +713,44 @@ hist_approx_quantile(const histogram_t *hist, const double *q_in, int nq, double
       i_b++;
       TRACK_VARS(i_b);
     }
-    if(lower_cnt == q_out[i_q]) {
+    if(bucket_width == 0) {
+      // 0 bucket case
       q_out[i_q] = bucket_left;
     }
-    else if(upper_cnt == q_out[i_q]) {
-      q_out[i_q] = bucket_left + bucket_width;
-    }
     else {
-      if(bucket_width == 0) q_out[i_q] = bucket_left;
-      else q_out[i_q] = bucket_left +
-             (q_out[i_q] - lower_cnt) / (upper_cnt - lower_cnt) * bucket_width;
+      /* Approximate quantile position within a non-zero bucket
+       *
+       * We use the following model:
+       * We represent the bucket by n independent random variables, that are
+       * uniformly distributed across the bucket. Let X_1 < X_2 < ... < X_n
+       * be a sorted version of these. X_k will be Beta(k,n+1-k) distributed.
+       * The expected location of X_k is:
+       *
+       *    x_k  =  bucket_left + k/(n+1) * bucket_width
+       *
+       * [ Variant: The ML estimator for the bucket position is
+       *            at (k-1)/(n-1) for n>1 and 1/2 if n=1 ]
+       *
+       * A q-quantile for the bucket, will be represented by the sample number:
+       *
+       *  (q = 0)  k = 1
+       *  (q > 1)  k = ceil(q*n)
+       *
+       * so that q=0 => k=1 and q=1 => k=n. This corresponds to Type=1 quantiles
+       * in the Hyndman-Fan list (Statistical Computing, 1996).
+       *
+       */
+      uint64_t n = hist->bvs[i_b].count;
+      double qn = q_out[i_q]; // this corresponds to q * n above
+      assert(qn >= lower_cnt);
+      assert(qn <= upper_cnt);
+      if (qn == lower_cnt) { // q = 0
+        q_out[i_q] = bucket_left + ((double)1)/(n+1) * bucket_width;
+      }
+      else { // q > 0
+        double k = ceil(qn - lower_cnt);
+        q_out[i_q] = bucket_left + ((double)k)/(n+1) * bucket_width;
+      }
     }
   }
   return 0;

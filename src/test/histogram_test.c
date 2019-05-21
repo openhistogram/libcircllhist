@@ -263,7 +263,7 @@ void simple_clear() {
   double out[1], in[1] = {0};
   hist_insert_intscale(h, 1, 0, 1);
   hist_approx_quantile(h, in, 1, out);
-  if(out[0] != 1) notokf("preclear q(0) -> %g != 1", out[0]);
+  if(out[0] != 1.05) notokf("preclear q(0) -> %g != 1", out[0]);
   else ok();
   hist_clear(h);
   out[0] = 0;
@@ -476,25 +476,25 @@ static void issue_n() {
 
   double in[9] = {0, 0.25, 0.5, 0.75, 0.90, 0.95, 0.99, 0.999, 1};
   double out[9];
-  hist_approx_quantile(main_thread_interval_hist, in, 9,out);
+  hist_approx_quantile(main_thread_interval_hist, in, 9, out);
 
   const histogram_t* const hist_array[1] = { per_thread_interval_hist };
   hist_accumulate(main_thread_interval_hist, hist_array, 1);
   hist_clear(per_thread_interval_hist);
 
   hist_insert_intscale(per_thread_interval_hist, 2, 0, 1);
-  hist_approx_quantile(per_thread_interval_hist, in, 9,out);
-  isf(out[0] == 2, " min==2.0 != %g", out[0]);
+  hist_approx_quantile(per_thread_interval_hist, in, 9, out);
+  isf(out[0] == 2.05, " min==2.0 != %g", out[0]);
 
   main_thread_interval_hist = hist_alloc();
   hist_accumulate(main_thread_interval_hist, hist_array, 1);
-  hist_approx_quantile(main_thread_interval_hist, in, 9,out);
-  isf(out[0] == 2, "min==1.0 != %g", 2.0);
+  hist_approx_quantile(main_thread_interval_hist, in, 9, out);
+  isf(out[0] == 2.05, "min==1.0 != %g", 2.0);
 
   histogram_t* direct_hist = hist_alloc();
   hist_insert_intscale(direct_hist, 2, 0, 1);
   hist_approx_quantile(direct_hist, in, 9,out);
-  isf(out[0] == 2, " min==2.0 != %g", out[0]);
+  isf(out[0] == 2.05, " min==2.0 != %g", out[0]);
 }
 
 void
@@ -569,34 +569,44 @@ int main() {
   halloc = hist_alloc;
 
   iq_test();
-  
+
   for(int ai=0; ai<2; ai++) {
     double s1[] = { 0.123, 0, 0.43, 0.41, 0.415, 0.2201, 0.3201, 0.125, 0.13 };
     T(mean_test(s1, 9, 0.24444));
 
     double h[] = { 1 };
     double qin[] = { 0, 0.25, 0.5, 1 };
-    double qout[] = { 1, 1.025, 1.05, 1.1 };
+    double qout[] = { 1.05, 1.05, 1.05, 1.05 };
     T(q_test(h, 1, qin, 4, qout));
 
+    double h_1[] = { 1,1 };
+    double qin_1[] = { 0, 1 };
+    double qout_1[] = { 1+0.1/3, 1+0.2/3 };
+    T(q_test(h_1, 2, qin_1, 2, qout_1));
+
+    double h_2[] = { 1,1,1 };
+    double qin_2[] = { 0, .5, 1 };
+    double qout_2[] = { 1.025, 1.05, 1.075 };
+    T(q_test(h_2, 3, qin_2, 3, qout_2));
+
     double qin2[] = { 0, 0.95, 0.99, 1.0 };
-    double qout2[] = { 0, 0.4355, 0.4391, 0.44 };
+    double qout2[] = { 0, 0.435, 0.435, 0.435 };
     T(q_test(s1, 9, qin2, 4, qout2));
 
     double s3[] = { 1.0, 2.0 };
     double qin3[] = { 0.5 };
-    double qout3[] = { 1.1 };
+    double qout3[] = { 1.05 };
     T(q_test(s3, 2, qin3, 1, qout3));
 
     double s4[] = { 1.0, 1e200 }; // out of range -> nan bucket
     double qin4[] = { 0, 1 };
-    double qout4[] = { 1.0, 1.1 };
+    double qout4[] = { 1.05, 1.05 };
     T(q_test(s4, 2, qin4, 2, qout4));
     T(mean_test(s4, 2, 1.05));
 
     double s5[] = { 1e200, 1e200, 1e200,  0, 0, 1e-20, 1e-20, 1e-20, 1e-10};
     double qin5[] = { 0, 1 };
-    double qout5[] = { 0, 1.1e-10 };
+    double qout5[] = { 0, 1.05e-10 };
     T(q_test(s5, 9, qin5, 2, qout5));
 
     double s6[] = { 0, 1 };
