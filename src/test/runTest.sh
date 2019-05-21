@@ -52,8 +52,11 @@ export LUA_INIT=''
 arg=''
 DEBUG_PREFIX=""
 
-echo "Running: $ $LUA_BIN $LUA_ARGS -l histogram_c_test -e \"histogram_c_test.runTests()\""
+echo "Lua histogram_c_test"
 $LUA_BIN $LUA_ARGS -l histogram_c_test -e "histogram_c_test.runTests()"
+
+echo "Lua circllhist_test"
+$LUA_BIN $LUA_ARGS -l circllhist_test -e "circllhist_test.runTests()"
 
 pushd ../python
 
