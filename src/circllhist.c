@@ -581,12 +581,12 @@ hist_approx_count_below(const histogram_t *hist, double threshold) {
   for(i=0; i<hist->used; i++) {
     if(hist_bucket_isnan(hist->bvs[i].bucket)) continue;
     double bucket_bound = hist_bucket_to_double(hist->bvs[i].bucket);
-    double bucket_upper;
+    double bucket_lower;
     if(bucket_bound < 0.0)
-      bucket_upper = bucket_bound;
+      bucket_lower = bucket_bound - hist_bucket_to_double_bin_width(hist->bvs[i].bucket);
     else
-      bucket_upper = bucket_bound + hist_bucket_to_double_bin_width(hist->bvs[i].bucket);
-    if(bucket_upper <= threshold)
+      bucket_lower = bucket_bound;
+    if(bucket_lower <= threshold)
       running_count += hist->bvs[i].count;
     else
       break;
