@@ -572,7 +572,7 @@ int main() {
 
   for(int ai=0; ai<2; ai++) {
     double s1[] = { 0.123, 0, 0.43, 0.41, 0.415, 0.2201, 0.3201, 0.125, 0.13 };
-    T(mean_test(s1, 9, 0.24444));
+    T(mean_test(s1, 9, 0.244339));
 
     double h[] = { 1 };
     double qin[] = { 0, 0.25, 0.5, 1 };
@@ -602,7 +602,7 @@ int main() {
     double qin4[] = { 0, 1 };
     double qout4[] = { 1.05, 1.05 };
     T(q_test(s4, 2, qin4, 2, qout4));
-    T(mean_test(s4, 2, 1.05));
+    T(mean_test(s4, 2, 1.04762));
 
     double s5[] = { 1e200, 1e200, 1e200,  0, 0, 1e-20, 1e-20, 1e-20, 1e-10};
     double qin5[] = { 0, 1 };

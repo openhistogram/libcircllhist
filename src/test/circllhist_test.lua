@@ -19,6 +19,12 @@ local function sim(x, y)
   return string.format("%.3f", x) == string.format("%.3f", y)
 end
 
+local function assert_sim(a,b)
+  if not sim(a,b) then
+    error(string.format("Expected %f got %f\n", a, b))
+  end
+end
+
 local function setup(scratch)
   scratch.hist = Circllhist.new();
 end
@@ -80,18 +86,19 @@ function tests.single(scratch)
     flag = true
   end
   assert(flag)
+  local mid = Circllhist.bucket_mid(100)
   local bin, cnt = hist:bucket_idx(0)
   assert(bin == 100)
   assert(cnt == 1)
   assert(hist:bucket_count() == 1)
   assert(hist:count() == 1)
-  assert(hist:mean() == 105)
+  assert_sim(hist:mean(), mid)
   assert(hist:stddev() == 0)
-  assert(hist:sum() == 105)
+  assert_sim(hist:sum(), mid)
   assert(hist:moment(0) == 1)
-  assert(hist:moment(1) == 105 )
-  assert(hist:moment(2) ==  105 * 105)
-  assert(hist:quantiles(0) == 105)
+  assert_sim(hist:moment(1), mid )
+  assert_sim(hist:moment(2), mid * mid)
+  assert_sim(hist:quantiles(0), 105)
   assert(hist:inverse_quantiles(100) == 0)
   assert(hist:count_below(100) == 1)
   assert(hist:count_above(100) == 1)
@@ -103,11 +110,11 @@ function tests.quantile_single(scratch)
   hist:insert(100)
 
   -- a single sample will be located at the bin midpoint
-  local mid = Circllhist.bucket_mid(100)
+  local mid = 105
   local q = {0, .1, .2, .5, .8, .9, 1}
   local Y = {hist:quantiles(unpack(q))}
   for _,y in ipairs(Y) do
-    assert(y == mid)
+    assert_sim(y, mid)
   end
 end
 
@@ -209,4 +216,13 @@ function tests.mbe(scratch)
   local hist = Circllhist.from_data { 10^1, 10^2, 10^3, 10^4 }
   local other_hist = Circllhist.from_data { 0, 0, 10^3, 10^4 }
   assert(other_hist:isequal(hist:compress_mbe(3)))
+end
+
+function tests.mid(scratch)
+  local function mid(a,b) return 2 * a * b / (a+b) end
+  assert_sim(Circllhist.bucket_mid(0), 0)
+  assert_sim(Circllhist.bucket_mid(100), mid(100, 110))
+  assert_sim(Circllhist.bucket_mid(900), mid(900, 910))
+  assert_sim(Circllhist.bucket_mid(990), mid(990, 1000))
+  assert_sim(Circllhist.bucket_mid(-100), mid(-100, -110))
 end

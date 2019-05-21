@@ -476,15 +476,39 @@ hist_bucket_to_double_bin_width(hist_bucket_t hb) {
   return power_of_ten[*pidx]/10.0;
 }
 
+/*
+ * A midpoint in a bin should a minimum error midpoint, not a linear midpoint. Let
+ * us choose an M such that M * bin-width finds our our placement from the bottom
+ * of a bin
+ *
+ * Take the [B0,B1) bin, with a bin-width of B1-B0...
+ * as a sample S approaches B1, we see error ((B1-B0)(1-M))/B1
+ * and as S approaches B0, we see error ((B1-B0)M)/B0.
+ *
+ * M should be chosen such that:
+ *
+ *   ((B1-B0)(1-M))/B1 = ((B1-B0)M)/B0
+ *
+ *    (B0)(B1-B0)(1-M) = (B1)(B1-B0)(M)
+ *
+ *          B0 - B0*M = B1*M
+ *
+ *                  B0 = (B0 + B1)(M)
+ *
+ *                   M = (B0)/(B0 + B1)
+ */
+
 double
 hist_bucket_midpoint(hist_bucket_t in) {
-  double out, interval;
+  double bottom, top, interval, ratio;
   if(hist_bucket_isnan(in)) return private_nan;
   if(in.val == 0) return 0;
-  out = hist_bucket_to_double(in);
+  bottom = hist_bucket_to_double(in);
   interval = hist_bucket_to_double_bin_width(in);
-  if(out < 0) interval *= -1.0;
-  return out + interval/2.0;
+  if(bottom < 0) interval *= -1.0;
+  top = bottom + interval;
+  ratio = (bottom)/(bottom + top);
+  return bottom + interval * ratio;
 }
 
 /* This is used for quantile calculation,

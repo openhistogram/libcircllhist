@@ -2,7 +2,7 @@ module(..., package.seeall)
 
 
 local ffi = require('ffi');
-local circllhist = require "ffi_libcircllhist"
+local libhist = require "ffi_libcircllhist"
 
 local writer = io.write
 
@@ -14,30 +14,31 @@ local function assert(cond)
 end
 
 local function setup(scratch)
-  scratch.hist = circllhist.hist_alloc();
+  scratch.hist = libhist.hist_alloc();
 end
 
 local function teardown(scratch)
-  circllhist.hist_free(scratch.hist);
+  libhist.hist_free(scratch.hist);
 end
 
 local tests = {}
 function tests.default_empty(scratch)
-  assert(circllhist.hist_bucket_count(scratch.hist) == 0)
+  assert(libhist.hist_bucket_count(scratch.hist) == 0)
 end
 
 function tests.single_bucket(scratch)
   local hist = scratch.hist
-  circllhist.hist_insert(hist, 3.1, 5)
-
-  assert(circllhist.hist_bucket_count(hist) == 1)
-  assert(circllhist.hist_approx_mean(hist) == 3.15)
+  libhist.hist_insert(hist, 100, 5)
 
   local value =  ffi.new("double[1]")
   local count =  ffi.new("uint64_t[1]")
-  circllhist.hist_bucket_idx(hist, 0, value, count)
-  assert(value[0] == 3.1)
+  libhist.hist_bucket_idx(hist, 0, value, count)
+  assert(value[0] == 100)
   assert(count[0] == 5)
+
+  mid = 100 + 10 * (100 / (100+110))
+  assert(math.abs(libhist.hist_approx_sum(hist) - 5*mid) < 0.001)
+  assert(math.abs(libhist.hist_approx_mean(hist) - mid) < 0.001)
 end
 
 function runTests()
