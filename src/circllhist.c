@@ -476,15 +476,39 @@ hist_bucket_to_double_bin_width(hist_bucket_t hb) {
   return power_of_ten[*pidx]/10.0;
 }
 
+/*
+ * A midpoint in a bin should a minimum error midpoint, not a linear midpoint. Let
+ * us choose an M such that M * bin-width finds our our placement from the bottom
+ * of a bin
+ *
+ * Take the [B0,B1) bin, with a bin-width of B1-B0...
+ * as a sample S approaches B1, we see error ((B1-B0)(1-M))/B1
+ * and as S approaches B0, we see error ((B1-B0)M)/B0.
+ *
+ * M should be chosen such that:
+ *
+ *   ((B1-B0)(1-M))/B1 = ((B1-B0)M)/B0
+ *
+ *    (B0)(B1-B0)(1-M) = (B1)(B1-B0)(M)
+ *
+ *          B0 - B0*M = B1*M
+ *
+ *                  B0 = (B0 + B1)(M)
+ *
+ *                   M = (B0)/(B0 + B1)
+ */
+
 double
 hist_bucket_midpoint(hist_bucket_t in) {
-  double out, interval;
+  double bottom, top, interval, ratio;
   if(hist_bucket_isnan(in)) return private_nan;
   if(in.val == 0) return 0;
-  out = hist_bucket_to_double(in);
+  bottom = hist_bucket_to_double(in);
   interval = hist_bucket_to_double_bin_width(in);
-  if(out < 0) interval *= -1.0;
-  return out + interval/2.0;
+  if(bottom < 0) interval *= -1.0;
+  top = bottom + interval;
+  ratio = (bottom)/(bottom + top);
+  return bottom + interval * ratio;
 }
 
 /* This is used for quantile calculation,
@@ -542,7 +566,6 @@ hist_approx_stddev(const histogram_t *hist) {
   double s2 = 0.0;
   if(!hist) return private_nan;
   ASSERT_GOOD_HIST(hist);
-  if(hist->used == 0) return 0.0;
   for(i=0; i<hist->used; i++) {
     if(hist_bucket_isnan(hist->bvs[i].bucket)) continue;
     double midpoint = hist_bucket_midpoint(hist->bvs[i].bucket);
@@ -582,12 +605,12 @@ hist_approx_count_below(const histogram_t *hist, double threshold) {
   for(i=0; i<hist->used; i++) {
     if(hist_bucket_isnan(hist->bvs[i].bucket)) continue;
     double bucket_bound = hist_bucket_to_double(hist->bvs[i].bucket);
-    double bucket_upper;
+    double bucket_lower;
     if(bucket_bound < 0.0)
-      bucket_upper = bucket_bound;
+      bucket_lower = bucket_bound - hist_bucket_to_double_bin_width(hist->bvs[i].bucket);
     else
-      bucket_upper = bucket_bound + hist_bucket_to_double_bin_width(hist->bvs[i].bucket);
-    if(bucket_upper <= threshold)
+      bucket_lower = bucket_bound;
+    if(bucket_lower <= threshold)
       running_count += hist->bvs[i].count;
     else
       break;
@@ -714,16 +737,44 @@ hist_approx_quantile(const histogram_t *hist, const double *q_in, int nq, double
       i_b++;
       TRACK_VARS(i_b);
     }
-    if(lower_cnt == q_out[i_q]) {
+    if(bucket_width == 0) {
+      // 0 bucket case
       q_out[i_q] = bucket_left;
     }
-    else if(upper_cnt == q_out[i_q]) {
-      q_out[i_q] = bucket_left + bucket_width;
-    }
     else {
-      if(bucket_width == 0) q_out[i_q] = bucket_left;
-      else q_out[i_q] = bucket_left +
-             (q_out[i_q] - lower_cnt) / (upper_cnt - lower_cnt) * bucket_width;
+      /* Approximate quantile position within a non-zero bucket
+       *
+       * We use the following model:
+       * We represent the bucket by n independent random variables, that are
+       * uniformly distributed across the bucket. Let X_1 < X_2 < ... < X_n
+       * be a sorted version of these. X_k will be Beta(k,n+1-k) distributed.
+       * The expected location of X_k is:
+       *
+       *    x_k  =  bucket_left + k/(n+1) * bucket_width
+       *
+       * [ Variant: The ML estimator for the bucket position is
+       *            at (k-1)/(n-1) for n>1 and 1/2 if n=1 ]
+       *
+       * A q-quantile for the bucket, will be represented by the sample number:
+       *
+       *  (q = 0)  k = 1
+       *  (q > 1)  k = ceil(q*n)
+       *
+       * so that q=0 => k=1 and q=1 => k=n. This corresponds to Type=1 quantiles
+       * in the Hyndman-Fan list (Statistical Computing, 1996).
+       *
+       */
+      uint64_t n = hist->bvs[i_b].count;
+      double qn = q_out[i_q]; // this corresponds to q * n above
+      assert(qn >= lower_cnt);
+      assert(qn <= upper_cnt);
+      if (qn == lower_cnt) { // q = 0
+        q_out[i_q] = bucket_left + ((double)1)/(n+1) * bucket_width;
+      }
+      else { // q > 0
+        double k = ceil(qn - lower_cnt);
+        q_out[i_q] = bucket_left + ((double)k)/(n+1) * bucket_width;
+      }
     }
   }
   return 0;

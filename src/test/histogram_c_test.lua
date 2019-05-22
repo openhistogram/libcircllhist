@@ -1,72 +1,53 @@
 module(..., package.seeall)
 
+
 local ffi = require('ffi');
-local histo_lib = require "ffi_libcircllhist"
+local libhist = require "ffi_libcircllhist"
 
-local tester = {}
-local histo
 local writer = io.write
-local success = function() writer("SUCCESS\n") end
-local failed = false
-local fail = function() writer("FAIL\n"); failed = true end
 
-function tester.setup(scratch)
-  histo = histo_lib.hist_alloc();
+local function assert(cond)
+  if not cond then
+    error("Assertion Failed")
+  end
+  writer(".")
 end
 
-function tester.teardown(scratch)
-  histo_lib.hist_free(histo);
+local function setup(scratch)
+  scratch.hist = libhist.hist_alloc();
 end
 
-function tester.test1_default_empty()
-  writer("test1_default_empty()...")
-  if histo_lib.hist_bucket_count(histo) == 0 then
-    success()
-  else
-    fail()
-  end
+local function teardown(scratch)
+  libhist.hist_free(scratch.hist);
 end
 
-function tester.test2_single_bucket()
-  writer("test2_single_bucket()...\n")
-  writer("  single insert, single bucket...")
-  histo_lib.hist_insert(histo, 3.1, 5)
-  if histo_lib.hist_bucket_count(histo) == 1 then
-    success()
-  else
-    fail()
-  end
+local tests = {}
+function tests.default_empty(scratch)
+  assert(libhist.hist_bucket_count(scratch.hist) == 0)
+end
 
-  writer("  single bucket, approx mean...")
-  if histo_lib.hist_approx_mean(histo) == 3.15 then
-    success()
-  else
-    fail()
-  end
+function tests.single_bucket(scratch)
+  local hist = scratch.hist
+  libhist.hist_insert(hist, 100, 5)
 
   local value =  ffi.new("double[1]")
   local count =  ffi.new("uint64_t[1]")
-  histo_lib.hist_bucket_idx(histo, 0, value, count)
+  libhist.hist_bucket_idx(hist, 0, value, count)
+  assert(value[0] == 100)
+  assert(count[0] == 5)
 
-  writer("  single bucket, value read...")
-  if value[0] == 3.1 then
-    success()
-  else
-    fail()
-  end
-
-  writer("  single bucket, count read...")
-  if count[0] == 5 then
-    success()
-  else
-    fail()
-  end
+  mid = 100 + 10 * (100 / (100+110))
+  assert(math.abs(libhist.hist_approx_sum(hist) - 5*mid) < 0.001)
+  assert(math.abs(libhist.hist_approx_mean(hist) - mid) < 0.001)
 end
 
 function runTests()
-    tester.setup()
-    tester.test1_default_empty()
-    tester.test2_single_bucket()
-    tester.teardown()
-    if failed then os.exit(-1) end
+  for test_name,test in pairs(tests) do
+    writer("Test " .. test_name .. ": ")
+    local scratch = {}
+    setup(scratch)
+    test(scratch)
+    teardown(scratch)
+    writer(" SUCCESS\n")
+  end
 end
