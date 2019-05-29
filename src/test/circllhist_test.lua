@@ -1,6 +1,7 @@
 module(..., package.seeall)
 
-local Circllhist = require "circllhist"
+local Circllhist = require("circllhist")
+Circllhist.init()
 
 local writer = io.write
 

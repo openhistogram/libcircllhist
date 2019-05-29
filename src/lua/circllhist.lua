@@ -40,6 +40,21 @@ Circllhist.__index = Circllhist
 local ffi_histogram_t = ffi.typeof("histogram_t")
 
 --
+-- Initializer
+--
+-- This function should be called after each import of this module. We don't call it directly during
+-- require() phase, since ffi metatables can't be changed after they have been assigned. Delaying
+-- the assignment allows users of this module to extend the Circllhist class before setting the
+-- metatype.
+local is_initialized = false
+function Circllhist.init()
+  if not is_initialized then
+    is_initialized = true
+    ffi.metatype(ffi_histogram_t, Circllhist)
+  end
+end
+
+--
 -- Constructor
 --
 
@@ -389,7 +404,5 @@ function Circllhist:compress_mbe(mbe)
   local hist_ptr = libhist.hist_compress_mbe(self, mbe)
   return Circllhist.from_ffi_ptr(hist_ptr, true)
 end
-
-ffi.metatype(ffi_histogram_t, Circllhist)
 
 return Circllhist
