@@ -147,8 +147,10 @@ API_EXPORT(void) hist_free(histogram_t *hist);
  *  integer measurements. */
 //! insert a value into a histogram count times
 API_EXPORT(uint64_t) hist_insert(histogram_t *hist, double val, uint64_t count);
-//! Remove data from a histogram count times
+//! Remove data from a histogram count times, returns the actual count removed protecting from underflow
 API_EXPORT(uint64_t) hist_remove(histogram_t *hist, double val, uint64_t count);
+//! Remove data from a histogram count times, returns the actual count removed protecting from underflow
+API_EXPORT(uint64_t) hist_remove_raw(histogram_t *hist, hist_bucket_t hb, uint64_t count);
 //! Insert a single bucket + count into a histogram
 //!
 //! Updates counts if the bucket exists
@@ -168,6 +170,8 @@ API_EXPORT(int) hist_bucket_idx_bucket(const histogram_t *hist, int idx, hist_bu
 API_EXPORT(int) hist_accumulate(histogram_t *tgt, const histogram_t * const *src, int cnt);
 //! Subtract bins from each of cnt histograms in src from tgt, return -1 on underrun error
 API_EXPORT(int) hist_subtract(histogram_t *tgt, const histogram_t * const *src, int cnt);
+//! Subtract bins in src from tgt treating the result count as signed, return -1 on overflow error
+API_EXPORT(int) hist_subtract_as_int64(histogram_t *tgt, const histogram_t *src);
 //! Clear data fast. Keeps buckets allocated.
 API_EXPORT(void) hist_clear(histogram_t *hist);
 //! Insert a value into a histogram value = val * 10^(scale)
@@ -184,6 +188,8 @@ API_EXPORT(ssize_t) hist_serialize_estimate(const histogram_t *h);
 API_EXPORT(ssize_t) hist_serialize_b64(const histogram_t *h, char *b64_serialized_histo_buff, ssize_t buff_len);
 API_EXPORT(ssize_t) hist_deserialize_b64(histogram_t *h, const void *b64_string, ssize_t b64_string_len);
 API_EXPORT(ssize_t) hist_serialize_b64_estimate(const histogram_t *h);
+
+API_EXPORT(void) hist_remove_zeroes(histogram_t *h);
 //! Compress histogram by squshing together adjacent buckets
 //!
 //! This compression is lossy. mean/quantiles will be affected by compression.

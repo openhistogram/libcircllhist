@@ -896,6 +896,23 @@ hist_internal_find(histogram_t *hist, hist_bucket_t hb, int *idx) {
   return 0;
 }
 
+static void
+hist_fast_rebuild(histogram_t *hist, int idx, int zero_first) {
+  int i;
+  struct histogram_fast *hfast = (struct histogram_fast *)hist;
+  if(zero_first) {
+    for(i=0; i<256; i++) {
+      if(hfast->faster[i]) memset(hfast->faster[i], 0, 256 * sizeof(uint16_t));
+    }
+  }
+  for(i=idx;i<hist->used;i++) {
+    struct hist_flevel *faster = (struct hist_flevel *)&hist->bvs[i].bucket;
+    if(hfast->faster[faster->l1] == NULL)
+      hfast->faster[faster->l1] = hist->allocator->calloc(256, sizeof(uint16_t));
+    hfast->faster[faster->l1][faster->l2] = i+1;
+  }
+}
+
 uint64_t
 hist_insert_raw(histogram_t *hist, hist_bucket_t hb, uint64_t count) {
   int found, idx;
@@ -932,14 +949,7 @@ hist_insert_raw(histogram_t *hist, hist_bucket_t hb, uint64_t count) {
     }
     hist->used++;
     if(hist->fast) {
-      struct histogram_fast *hfast = (struct histogram_fast *)hist;
-      /* reindex if in fast mode */
-      for(i=idx;i<hist->used;i++) {
-        struct hist_flevel *faster = (struct hist_flevel *)&hist->bvs[i].bucket;
-        if(hfast->faster[faster->l1] == NULL)
-          hfast->faster[faster->l1] = hist->allocator->calloc(256, sizeof(uint16_t));
-        hfast->faster[faster->l1][faster->l2] = i+1;
-      }
+      hist_fast_rebuild(hist, idx, 0);
     }
   }
   else { // found
@@ -979,6 +989,38 @@ hist_remove(histogram_t *hist, double val, uint64_t count) {
     return count;
   }
   return 0;
+}
+
+uint64_t
+hist_remove_raw(histogram_t *hist, hist_bucket_t hb, uint64_t count) {
+  int idx;
+  ASSERT_GOOD_HIST(hist);
+  if(hist_internal_find(hist, hb, &idx)) {
+    uint64_t newval = hist->bvs[idx].count - count;
+    if(newval > hist->bvs[idx].count) newval = 0; /* we rolled */
+    count = hist->bvs[idx].count - newval;
+    hist->bvs[idx].count = newval;
+    ASSERT_GOOD_HIST(hist);
+    return count;
+  }
+  return 0;
+}
+
+void
+hist_remove_zeroes(histogram_t *hist) {
+  int i=0,j=0;
+  if(hist == NULL) return;
+  for(;i<hist->used;i++,j++) {
+    if(hist->bvs[i].count > 0) {
+      if(i != j) hist->bvs[j] = hist->bvs[i];
+    } else {
+      j--;
+    }
+  }
+  hist->used = j;
+  if(hist->fast) {
+    hist_fast_rebuild(hist, 0, 1);
+  }
 }
 
 uint64_t
@@ -1116,6 +1158,52 @@ hist_subtract(histogram_t *tgt, const histogram_t * const *hist, int cnt) {
       src_idx++;
     }
   }
+  ASSERT_GOOD_HIST(tgt);
+  return rv;
+}
+
+int
+hist_subtract_as_int64(histogram_t *tgt, const histogram_t *hist) {
+  int i, tgt_idx, src_idx;
+  int rv = 0;
+  ASSERT_GOOD_HIST(tgt);
+
+  tgt_idx = src_idx = 0;
+  if(!hist) return 0;
+  ASSERT_GOOD_HIST(hist);
+  for(i=0; i<hist->used; i++) hist_insert_raw(tgt, hist->bvs[i].bucket, 0);
+
+  while(tgt_idx < tgt->used && src_idx < hist->used) {
+    int cmp = hist_bucket_cmp(tgt->bvs[tgt_idx].bucket, hist->bvs[src_idx].bucket);
+    /* if the match, attempt to subtract, and move tgt && src fwd. */
+    if(cmp == 0) {
+      if(tgt->bvs[tgt_idx].count < hist->bvs[src_idx].count) {
+        uint64_t rev = hist->bvs[src_idx].count - tgt->bvs[tgt_idx].count;
+        if(rev > INT64_MAX) rv = -1;
+        int64_t newneg = -1 * rev;
+        memcpy(&tgt->bvs[tgt_idx].count, &newneg, sizeof(uint64_t));
+      } else {
+        tgt->bvs[tgt_idx].count = tgt->bvs[tgt_idx].count - hist->bvs[src_idx].count;
+      }
+      tgt_idx++;
+      src_idx++;
+    }
+    else if(cmp > 0) {
+      tgt_idx++;
+    }
+    else {
+      if(hist->bvs[src_idx].count > 0) rv = -1;
+      src_idx++;
+    }
+  }
+  /* run for the rest of the source so see if we have stuff we can't subtract */
+  while(src_idx < hist->used) {
+    assert(hist->bvs[src_idx].count == 0);
+    src_idx++;
+  }
+
+  if(rv == 0) hist_remove_zeroes(tgt);
+
   ASSERT_GOOD_HIST(tgt);
   return rv;
 }
