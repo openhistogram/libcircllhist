@@ -923,7 +923,6 @@ hist_insert_raw(histogram_t *hist, hist_bucket_t hb, uint64_t count) {
   }
   found = hist_internal_find(hist, hb, &idx);
   if(unlikely(!found)) {
-    int i;
     if(unlikely(hist->used == hist->allocd)) {
       /* A resize is required */
       histogram_t dummy;
