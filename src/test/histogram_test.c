@@ -47,6 +47,19 @@ static void is(int expr) {
   test_desc = "??"; \
 } while(0)
 
+bool hists_equal(histogram_t *a, histogram_t *b) {
+  if(hist_bucket_count(a) != hist_bucket_count(b)) return false;
+  for(int i=0; i<hist_bucket_count(a); i++) {
+    hist_bucket_t ab, bb;
+    uint64_t ac, bc;
+    hist_bucket_idx_bucket(a, i, &ab, &ac);
+    hist_bucket_idx_bucket(b, i, &bb, &bc);
+    if(ab.exp != bb.exp) return false;
+    if(ab.val != bb.val) return false;
+    if(ac != bc) return false;
+  }
+  return true;
+}
 bool double_equals(double a, double b) {
   double r, diff, max = fabs(a);
   if(fabs(b) > max) max = fabs(b);
@@ -551,6 +564,37 @@ iq_test() {
   T(is(double_equals(out[9], 1)));
 }
 
+void
+diff_test() {
+  histogram_t *h1, *h2, *diff, *result;
+  double h1_v[] = { 0.12, 0.12, 1, 4, 5, 12, 92, 42, 10, 1, 4 };
+  double h2_v[] = { 0.12, 4, 8, 12, 92, 101 };
+  h1 = build(h1_v, sizeof(h1_v)/sizeof(*h1_v));
+  h2 = build(h2_v, sizeof(h2_v)/sizeof(*h2_v));
+  diff = hist_clone(h2);
+  hist_subtract_as_int64(diff, h1);
+  result = hist_clone(h1);
+
+  for(int i=0; i<hist_bucket_count(diff); i++) {
+    hist_bucket_t hb;
+    int64_t hackdiff;
+    hist_bucket_idx_bucket(diff, i, &hb, (uint64_t *)&hackdiff);
+    if(hackdiff < 0) {
+      hackdiff *= -1;
+      hist_remove_raw(result, hb, hackdiff);
+    } else {
+      hist_insert_raw(result, hb, hackdiff);
+    }
+  }
+  hist_remove_zeroes(h2);
+  hist_remove_zeroes(result);
+  is(hists_equal(h2, result));
+  hist_free(h1);
+  hist_free(h2);
+  hist_free(diff);
+  hist_free(result);
+}
+
 int main() {
   srand48(time(NULL));
   bucket_tests();
@@ -621,6 +665,8 @@ int main() {
   T(simple_clear());
 
   T(issue_n());
+
+  T(diff_test());
 
   T(is(isnan(hist_approx_mean(NULL))));
   T(is(isnan(hist_approx_stddev(NULL))));

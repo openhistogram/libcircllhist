@@ -1148,6 +1148,7 @@ hist_subtract_as_int64(histogram_t *tgt, const histogram_t *hist) {
   /* run for the rest of the source so see if we have stuff we can't subtract */
   while(src_idx < hist->used) {
     assert(hist->bvs[src_idx].count == 0);
+    src_idx++;
   }
 
   if(rv == 0) hist_remove_zeroes(tgt);
