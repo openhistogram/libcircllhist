@@ -914,6 +914,21 @@ hist_fast_rebuild(histogram_t *hist, int idx, int zero_first) {
 }
 
 uint64_t
+hist_insert_raw_end(histogram_t *hist, hist_bucket_t hb, uint64_t count) {
+  if(unlikely(hist->used == hist->allocd ||
+              (hist->used > 0 && hist_bucket_cmp(hist->bvs[hist->used-1].bucket, hb) >= 0))) {
+    assert(0);
+    return hist_insert_raw(hist, hb, count);
+  }
+  hist->bvs[hist->used].bucket = hb;
+  hist->bvs[hist->used].count = count;
+  hist->used++;
+  if(hist->fast) {
+    hist_fast_rebuild(hist, hist->used-1, 0);
+  }
+  return count;
+}
+uint64_t
 hist_insert_raw(histogram_t *hist, hist_bucket_t hb, uint64_t count) {
   int found, idx;
   ASSERT_GOOD_HIST(hist);
@@ -1162,44 +1177,121 @@ hist_subtract(histogram_t *tgt, const histogram_t * const *hist, int cnt) {
 }
 
 int
-hist_subtract_as_int64(histogram_t *tgt, const histogram_t *hist) {
+hist_subtract_as_int64(histogram_t *tgt, const histogram_t *src) {
   int i, tgt_idx, src_idx;
   int rv = 0;
   ASSERT_GOOD_HIST(tgt);
 
   tgt_idx = src_idx = 0;
-  if(!hist) return 0;
-  ASSERT_GOOD_HIST(hist);
-  for(i=0; i<hist->used; i++) hist_insert_raw(tgt, hist->bvs[i].bucket, 0);
+  if(!src) return 0;
+  ASSERT_GOOD_HIST(src);
 
-  while(tgt_idx < tgt->used && src_idx < hist->used) {
-    int cmp = hist_bucket_cmp(tgt->bvs[tgt_idx].bucket, hist->bvs[src_idx].bucket);
+  while(tgt_idx <= tgt->used && src_idx < src->used) {
+    int cmp = unlikely(tgt_idx == tgt->used) ? -1 :
+                hist_bucket_cmp(tgt->bvs[tgt_idx].bucket, src->bvs[src_idx].bucket);
     /* if the match, attempt to subtract, and move tgt && src fwd. */
     if(cmp == 0) {
-      if(tgt->bvs[tgt_idx].count < hist->bvs[src_idx].count) {
-        uint64_t rev = hist->bvs[src_idx].count - tgt->bvs[tgt_idx].count;
+      if(tgt->bvs[tgt_idx].count < src->bvs[src_idx].count) {
+        uint64_t rev = src->bvs[src_idx].count - tgt->bvs[tgt_idx].count;
         if(rev > INT64_MAX) rv = -1;
         int64_t newneg = -1 * rev;
         memcpy(&tgt->bvs[tgt_idx].count, &newneg, sizeof(uint64_t));
       } else {
-        tgt->bvs[tgt_idx].count = tgt->bvs[tgt_idx].count - hist->bvs[src_idx].count;
+        tgt->bvs[tgt_idx].count = tgt->bvs[tgt_idx].count - src->bvs[src_idx].count;
       }
       tgt_idx++;
       src_idx++;
     }
     else if(cmp > 0) {
+      /* tgt unmodified */
       tgt_idx++;
     }
     else {
-      if(hist->bvs[src_idx].count > 0) rv = -1;
-      src_idx++;
+      /* This src isn't in tgt, we need to insert it here with 0 count.
+       * we don't incrememnt either src_idx or tgt_idx so the next loop through
+       * we'll match and do the right thing. */
+      int idx = tgt_idx;
+      if(tgt->used == tgt->allocd) {
+        histogram_t dummy;
+        dummy.bvs = tgt->allocator->malloc((tgt->allocd + DEFAULT_HIST_SIZE) *
+                                             sizeof(*tgt->bvs));
+        memcpy(dummy.bvs, tgt->bvs, idx * sizeof(*tgt->bvs));
+        memcpy(dummy.bvs + idx + 1, tgt->bvs + idx, (tgt->used - idx)*sizeof(*tgt->bvs));
+        tgt->allocator->free(tgt->bvs);
+        tgt->bvs = dummy.bvs;
+        tgt->allocd += DEFAULT_HIST_SIZE;
+      } else {
+        memmove(tgt->bvs + idx + 1, tgt->bvs + idx, (tgt->used - idx)*sizeof(*tgt->bvs));
+      }
+      tgt->bvs[tgt_idx].bucket = src->bvs[src_idx].bucket;
+      tgt->bvs[tgt_idx].count = 0;
+      tgt->used++;
     }
   }
-  /* run for the rest of the source so see if we have stuff we can't subtract */
-  while(src_idx < hist->used) {
-    assert(hist->bvs[src_idx].count == 0);
-    src_idx++;
+  assert(src_idx == src->used);
+
+  if(rv == 0) hist_remove_zeroes(tgt);
+
+  ASSERT_GOOD_HIST(tgt);
+  return rv;
+}
+
+int
+hist_add_as_int64(histogram_t *tgt, const histogram_t *src) {
+  int i, tgt_idx, src_idx;
+  int rv = 0;
+  ASSERT_GOOD_HIST(tgt);
+
+  tgt_idx = src_idx = 0;
+  if(!src) return 0;
+  ASSERT_GOOD_HIST(src);
+
+  while(tgt_idx <= tgt->used && src_idx < src->used) {
+    int cmp = unlikely(tgt_idx == tgt->used) ? -1 :
+                hist_bucket_cmp(tgt->bvs[tgt_idx].bucket, src->bvs[src_idx].bucket);
+    /* if the match, attempt to subtract, and move tgt && src fwd. */
+    if(cmp == 0) {
+      int64_t rev;
+      memcpy(&rev, &src->bvs[src_idx].count, sizeof(uint64_t));
+      if(rev > 0) {
+        uint64_t new_count = tgt->bvs[tgt_idx].count + rev;
+        if(new_count < tgt->bvs[tgt_idx].count) rv = -1; /* roll */
+        tgt->bvs[tgt_idx].count = new_count;
+      } else {
+        rev *= -1;
+        if(rev > tgt->bvs[tgt_idx].count) rv = -1;
+        tgt->bvs[tgt_idx].count -= rev;
+      }
+      tgt_idx++;
+      src_idx++;
+    }
+    else if(cmp > 0) {
+      /* tgt unmodified */
+      tgt_idx++;
+    }
+    else {
+      /* This src isn't in tgt, we need to insert it here with 0 count.
+       * we don't incrememnt either src_idx or tgt_idx so the next loop through
+       * we'll match and do the right thing. */
+      int idx = tgt_idx;
+      if(tgt->used == tgt->allocd) {
+        histogram_t dummy;
+        dummy.bvs = tgt->allocator->malloc((tgt->allocd + DEFAULT_HIST_SIZE) *
+                                             sizeof(*tgt->bvs));
+        memcpy(dummy.bvs, tgt->bvs, idx * sizeof(*tgt->bvs));
+        memcpy(dummy.bvs + idx + 1, tgt->bvs + idx, (tgt->used - idx)*sizeof(*tgt->bvs));
+        tgt->allocator->free(tgt->bvs);
+        tgt->bvs = dummy.bvs;
+        tgt->allocd += DEFAULT_HIST_SIZE;
+      } else {
+        memmove(tgt->bvs + idx + 1, tgt->bvs + idx, (tgt->used - idx)*sizeof(*tgt->bvs));
+      }
+      tgt->bvs[tgt_idx].bucket = src->bvs[src_idx].bucket;
+      tgt->bvs[tgt_idx].count = 0;
+      tgt->used++;
+    }
   }
+  assert(src_idx == src->used);
 
   if(rv == 0) hist_remove_zeroes(tgt);
 

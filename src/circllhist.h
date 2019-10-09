@@ -156,6 +156,9 @@ API_EXPORT(uint64_t) hist_remove_raw(histogram_t *hist, hist_bucket_t hb, uint64
 //! Updates counts if the bucket exists
 //! Handles re-allocation of new buckets if needed
 API_EXPORT(uint64_t) hist_insert_raw(histogram_t *hist, hist_bucket_t hb, uint64_t count);
+//! Like hist_insert_raw, but optimizes for the case that this bin does not exist, there is room, and is
+//! larger than any existing bin.
+API_EXPORT(uint64_t) hist_insert_raw_end(histogram_t *hist, hist_bucket_t hb, uint64_t count);
 //! Get the number of used buckets in a histogram
 API_EXPORT(int) hist_bucket_count(const histogram_t *hist);
 //! Same as hist_bucket_count
@@ -172,6 +175,8 @@ API_EXPORT(int) hist_accumulate(histogram_t *tgt, const histogram_t * const *src
 API_EXPORT(int) hist_subtract(histogram_t *tgt, const histogram_t * const *src, int cnt);
 //! Subtract bins in src from tgt treating the result count as signed, return -1 on overflow error
 API_EXPORT(int) hist_subtract_as_int64(histogram_t *tgt, const histogram_t *src);
+//! Add bins in src from tgt treating src counts as signed, return -1 on overflow error
+API_EXPORT(int) hist_add_as_int64(histogram_t *tgt, const histogram_t *src);
 //! Clear data fast. Keeps buckets allocated.
 API_EXPORT(void) hist_clear(histogram_t *hist);
 //! Insert a value into a histogram value = val * 10^(scale)

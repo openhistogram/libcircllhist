@@ -18,6 +18,7 @@ class TestHistogram(unittest.TestCase):
         g = Circllhist.from_dict(h.to_dict())
         self.assertEqual(h.sum(), g.sum())
         h.merge(g)
+        print(h.to_b64())
         f = Circllhist.from_b64(h.to_b64())
         self.assertEqual(h.sum(), f.sum())
         h.clear()
