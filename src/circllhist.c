@@ -1178,7 +1178,7 @@ hist_subtract(histogram_t *tgt, const histogram_t * const *hist, int cnt) {
 
 int
 hist_subtract_as_int64(histogram_t *tgt, const histogram_t *src) {
-  int i, tgt_idx, src_idx;
+  int tgt_idx, src_idx;
   int rv = 0;
   ASSERT_GOOD_HIST(tgt);
 
@@ -1238,7 +1238,7 @@ hist_subtract_as_int64(histogram_t *tgt, const histogram_t *src) {
 
 int
 hist_add_as_int64(histogram_t *tgt, const histogram_t *src) {
-  int i, tgt_idx, src_idx;
+  int tgt_idx, src_idx;
   int rv = 0;
   ASSERT_GOOD_HIST(tgt);
 
