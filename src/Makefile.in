@@ -106,7 +106,8 @@ $(LIBCIRCLLHIST_V):	$(LIBCIRCLLHIST_OBJS)
 	fi
 
 circllhist_print:	circllhist_print.o circllhist.o
-	$(Q)$(CC) -o $@   circllhist_print.o circllhist.o -lm
+	@echo "- linking $@"
+	$(Q)$(CC) $(CFLAGS) -o $@ circllhist_print.o circllhist.o -lm
 
 test/histogram_test: test/histogram_test.c $(LIBCIRCLLHIST)
 	$(Q)$(CC) -I. $(CPPFLAGS) $(CFLAGS) -L. $(LDFLAGS) -I. -o $@ test/histogram_test.c -lcircllhist
@@ -171,6 +172,7 @@ tests-python:
 clean:
 	rm -f *.lo *.o $(TARGETS)
 	rm -f $(LIBCIRCLLHIST) $(LIBCIRCLLHIST_V)
+	rm -f circllhist_print
 	rm -f histogram_test
 	rm -f histogram_perl
 	rm -f circllhist.ffi.h
