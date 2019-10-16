@@ -74,7 +74,7 @@ endif
 LUA_FFI=lua/ffi_libcircllhist.lua
 PYTHON_FFI=python/circllhist/ffi.py
 
-TARGETS=$(LIBCIRCLLHISTA) $(LIBCIRCLLHIST) $(LUA_FFI) $(PYTHON_FFI) test/histogram_test test/histogram_perf
+TARGETS=$(LIBCIRCLLHISTA) $(LIBCIRCLLHIST) circllhist_print $(LUA_FFI) $(PYTHON_FFI) test/histogram_test test/histogram_perf
 
 all:	reversion $(TARGETS)
 
@@ -104,6 +104,9 @@ $(LIBCIRCLLHIST_V):	$(LIBCIRCLLHIST_OBJS)
 		echo "- merging CTF ($@)" ; \
 		 $(CTFMERGE) -l @LIBCIRCLLHIST_VERSION@ -o $@ $(LIBCIRCLLHIST_OBJS) ; \
 	fi
+
+circllhist_print:	circllhist_print.o circllhist.o
+	$(Q)$(CC) -o $@   circllhist_print.o circllhist.o -lm
 
 test/histogram_test: test/histogram_test.c $(LIBCIRCLLHIST)
 	$(Q)$(CC) -I. $(CPPFLAGS) $(CFLAGS) -L. $(LDFLAGS) -I. -o $@ test/histogram_test.c -lcircllhist
@@ -150,7 +153,11 @@ install-libs:    $(LIBCIRCLLHIST) $(LUA_FFI)
 	ln -sf $(LIBCIRCLLHIST_V) $(DESTDIR)$(libdir)/$(LIBCIRCLLHIST)
 	$(INSTALL) -m 0755 $(LUA_FFI) $(DESTDIR)$(datadir)/lua/5.1/
 
-install:	install-headers install-libs
+install-prog:
+	$(top_srcdir)/buildtools/mkinstalldirs $(DESTDIR)$(bindir)
+	$(INSTALL) -m 0755 circllhist_print $(DESTDIR)$(bindir)/circllhist_print
+
+install:	install-prog install-headers install-libs
 
 install-python:
 	cd python && python setup.py install

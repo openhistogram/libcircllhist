@@ -7,6 +7,7 @@
 *.dylib
 *.xmlh
 *.dSYM
+.*.swp
 autom4te.cache
 configure
 .configure.*
@@ -14,6 +15,7 @@ config.log
 config.status
 .DS_Store
 /Makefile
+src/circllhist_print
 src/Makefile
 src/**/Makefile
 src/*.dSYM
