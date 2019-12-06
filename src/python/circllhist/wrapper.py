@@ -126,11 +126,16 @@ class Circllhist(object):
         "Returns the number of samples in the histogram that are in the same bucket as the provided value"
         return ffi.C.hist_approx_count_nearby(self._h, value)
 
-    def quantile(self, q):
-        "Returns an approximation of the q-quantile"
+    def quantile(self, q, qtype=1):
+        """Returns an approximation of a q-quantile of type 1 or 7"""
         q_in = ffi.ffi.new("double*", q)
         q_out = ffi.ffi.new("double*")
-        ffi.C.hist_approx_quantile(self._h, q_in, 1, q_out)
+        if qtype == 1:
+            ffi.C.hist_approx_quantile(self._h, q_in, 1, q_out)
+        elif qtype == 7:
+            ffi.C.hist_approx_quantile7(self._h, q_in, 1, q_out)
+        else:
+            raise("Quantile type not supported: " + qtype)
         return q_out[0]
 
     def to_dict(self):

@@ -346,6 +346,27 @@ function Circllhist:quantiles(...)
   return unpack(out)
 end
 
+--- returns the approximated type-7 quantiles of the samples represented
+-- by the histogram
+-- - quantiles have to be sorted in ascending order
+-- - We compute Type-1 quantiles of the Hyndman Fan list
+-- - returns nil if the histogram is empty
+function Circllhist:quantiles7(...)
+  local quantiles = {...}
+  local q_in = ffi.new("double[?]", #quantiles, quantiles)
+  local q_out = ffi.new("double[?]", #quantiles, 0/0)
+  local rc = libhist.hist_approx_quantile7(self, q_in, #quantiles, q_out)
+  if rc ~= 0 then
+    rc = HIST_APPROX_QUANTILE_ERRORS[rc] or tostring(rc)
+    error("hist_approx_quantile failed with: " .. rc)
+  end
+  local out = {}
+  for i=1,#quantiles do
+    out[i] = q_out[i-1]
+  end
+  return unpack(out)
+end
+
 -- returns ratios of samples that are lower than the provided values.
 -- E.g.
 -- a, b = inverse_quantiles(10, 15)
