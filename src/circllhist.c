@@ -679,7 +679,7 @@ typedef enum {
  * -2 (out of order quantile request)
  * -3 (out of bound quantile)
  */
-int
+static inline int
 hist_approx_quantile_dispatch(const histogram_t *hist, const double *q_in, int nq, double *q_out, qtype_t qtype) {
   int i_q, i_b;
   double total_cnt = 0.0, bucket_width = 0.0,
