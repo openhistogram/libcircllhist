@@ -718,7 +718,7 @@ hist_approx_quantile_dispatch(const histogram_t *hist, const double *q_in, int n
       q_out[i_q] = total_cnt * q_in[i_q];
       break;
     case QTYPE7:
-      q_out[i_q] = (total_cnt - 1) * q_in[i_q]  + 1;
+      q_out[i_q] = floor( (total_cnt - 1) * q_in[i_q]  + 1 );
       break;
     }
   }
@@ -768,6 +768,7 @@ hist_approx_quantile_dispatch(const histogram_t *hist, const double *q_in, int n
        *            at (k-1)/(n-1) for n>1 and 1/2 if n=1 ]
        */
       uint64_t n = hist->bvs[i_b].count;
+      double k;
       switch (qtype) {
       case QTYPE1:
         /*
@@ -784,32 +785,27 @@ hist_approx_quantile_dispatch(const histogram_t *hist, const double *q_in, int n
         double qn = q_out[i_q];
         assert(qn >= lower_cnt);
         assert(qn <= upper_cnt);
-        double k = ceil(qn - lower_cnt);
+        k = ceil(qn - lower_cnt);
         if (k == 0) { // case q == 0 above
-          q_out[i_q] = bucket_left + ((double)1)/(n+1) * bucket_width;
+          q_out[i_q] = bucket_left + 1.0/(n+1) * bucket_width;
         }
         else { // case q > 0 above
-          q_out[i_q] = bucket_left + ((double)k)/(n+1) * bucket_width;
+          q_out[i_q] = bucket_left + k/(n+1) * bucket_width;
         }
         break;
       case QTYPE7:
         /*
          * For Type 7 Quantiles, we consider samples at indices:
          *
-         *  k_min = floor( q*(n-1) + 1 )
-         *  k_max = ceil(  q*(n-1) + 1 )
+         *  k = floor( q*(n-1) + 1 )
          *
-         * and interpolate linearly between them.
-         * Again: q=0 => k=1 and q=1 => k=n. This corresponds to Type=7 quantiles
-         * in the Hyndman-Fan list (Statistical Computing, 1996).
+         * This corresponds to discretized Type=7 quantiles in
+         * the Hyndman-Fan list (Statistical Computing,
+         * 1996).
          */
         ;
-        int64_t k_min = floor(q_out[i_q] - lower_cnt);
-        int64_t k_max = ceil(q_out[i_q] - lower_cnt);
-        double x_min = bucket_left + ((double)k_min)/(n+1) * bucket_width;
-        double x_max = bucket_left + ((double)k_max)/(n+1) * bucket_width;
-        double gamma = (q_out[i_q] - lower_cnt) - k_min; /* 0 <= gamma < 1 */
-        q_out[i_q] = x_min * (1-gamma) + x_max * (gamma);
+        k = q_out[i_q] - lower_cnt;
+        q_out[i_q] = bucket_left + k/(n+1) * bucket_width;
         break;
       }
     }

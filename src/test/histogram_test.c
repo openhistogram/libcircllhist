@@ -646,11 +646,11 @@ int main() {
     T(q_test(h, 1, qin, 4, qout));
     T(q7_test(h, 1, qin, 4, qout));
 
-    double h_1[] = { 1,1 };
+    double h_1[] = { 1, 1 };
     double a=1+0.1*1/3, b = 1+0.1*2/3;
     double qin_1[] =  { 0, .25, .5, .75, 1 };
     double qout_1[]  = { a, a, a, b, b };
-    double q7out_1[] = { a, a*.75+b*.25, a/2+b/2, a*.25+b*.75, b };
+    double q7out_1[] = { a, a, a, a, b };
     T(q_test(h_1, 2, qin_1, 5, qout_1));
     T(q7_test(h_1, 2, qin_1, 5, q7out_1));
 
@@ -662,14 +662,14 @@ int main() {
 
     double qin2[] = { 0, 0.95, 0.99, 1.0 };
     double qout2[] = { 0, 0.435, 0.435, 0.435 };
-    double q7out2[] = { 0, 0.433, 0.4346, 0.435 };
+    double q7out2[] = { 0, 0.416667, 0.416667, 0.435 };
     T(q_test(s1, 9, qin2, 4, qout2));
     T(q7_test(s1, 9, qin2, 4, q7out2));
 
     double s3[] = { 1.0, 2.0 };
     double qin3[] = { 0.5 };
     double qout3[] = { 1.05 };
-    double q7out3[] = { 2.025 };
+    double q7out3[] = { 1.05 };
     T(q_test(s3, 2, qin3, 1, qout3));
     T(q7_test(s3, 2, qin3, 1, q7out3));
 
@@ -687,11 +687,18 @@ int main() {
     T(q7_test(s5, 9, qin5, 2, qout5));
 
     double s6[] = { 0, 1 };
-    double qin6[] = { 0, 0.1 };
-    double qout6[] = { 0, 0 };
-    double q7out6[] = { 0, 1.005 };
+    double qin6[] = { 0, 0.1, 0.499, 0.501, 0.9 , 1 };
+    double qout6[] = { 0, 0,  0,     1,     1,    1 };
+    double q7out6[] = { 0, 0, 0,     0,     0,    1 };
     T(q_test(s6, 2, qin6, 2, qout6));
     T(q7_test(s6, 2, qin6, 2, q7out6));
+
+    double h7[] = { 10, 100 };
+    double qin7[]   = {  0,    0.1, 0.499, .501,  .9,   1 };
+    double qout7[]  = { 10.5, 10.5, 10.5,  105,   105,  105 };
+    double q7out7[] = { 10.5, 10.5, 10.5,  10.5,  10.5, 105 };
+    T(q_test(h7, 2, qin7, 6, qout7));
+    T(q7_test(h7, 2, qin7, 6, q7out7));
 
     T(serialize_test());
 

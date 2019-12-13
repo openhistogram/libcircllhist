@@ -164,9 +164,9 @@ function tests.quantile7(scratch)
   hist:insert(2, 1)
   hist:insert(3, 1)
   hist:insert(4, 1)
-  local q  = {0/4, 1/4, 2/4, 3/4, 4/4 }
+  local q  = {  0/4, 1/4, 2/4, 3/4, 4/4 }
   local Z1 = {  1.05,   1.05,   2.05,   3.05,   4.05 }
-  local Z7 = {  1.05,   2.037,  3.025,  4.0125, 4.05 }
+  local Z7 = {  1.05,   1.05,   2.05,   3.05,   4.05 }
   local Y = {hist:quantiles(unpack(q))}
   for i,z in ipairs(Z1) do
     assert(sim(Y[i],z))
