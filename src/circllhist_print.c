@@ -3,6 +3,7 @@
 #include <string.h>
 #include <math.h>
 #include <getopt.h>
+#include <inttypes.h>
 #include "circllhist.h"
 
 enum ofmt {
@@ -25,7 +26,7 @@ void print_hist(histogram_t *hist) {
         double v;
         uint64_t vc;
         hist_bucket_idx(hist, i, &v, &vc);
-        printf("%s\"%g\":%zu", i ? "," : "", v, vc);
+        printf("%s\"%g\":%" PRIu64, i ? "," : "", v, vc);
       }
       printf("}\n");
       break;
