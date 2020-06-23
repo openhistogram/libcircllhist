@@ -229,12 +229,12 @@ API_EXPORT(uint64_t) hist_approx_count_above(const histogram_t *hist, double thr
 //! \param hist
 //! \param value
 API_EXPORT(uint64_t) hist_approx_count_nearby(const histogram_t *hist, double value);
-//! Approiximate n quantiles of all values stored in the histogram
+//! Approximate n quantiles of all values stored in the histogram
 //! \param *q_in array of quantiles to comute
 //! \param nq length of quantile array
 //! \param *q_out pre-allocated array where results shall be written to
 API_EXPORT(int) hist_approx_quantile(const histogram_t *, const double *q_in, int nq, double *q_out);
-//! Approiximate n inverse quantiles (ratio below threshold) of all values stored in the histogram
+//! Approximate n inverse quantiles (ratio below threshold) of all values stored in the histogram
 //! \param *iq_in array of inverse quantiles to compute
 //! \param niq length of inverse quantile array
 //! \param *iq_out pre-allocated array where results shall be written to
