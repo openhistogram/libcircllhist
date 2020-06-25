@@ -119,21 +119,21 @@ API_EXPORT(histogram_t *) hist_fast_alloc(void);
 //! Create a fast-histogram with preallocated bins, uses default allocator
 API_EXPORT(histogram_t *) hist_fast_alloc_nbins(int nbins);
 //! Create an exact copy of other, uses default allocator
-API_EXPORT(histogram_t *) hist_clone(histogram_t *other);
+API_EXPORT(histogram_t *) hist_clone(const histogram_t *other);
 
 //! Create a new histogram, uses custom allocator
-API_EXPORT(histogram_t *) hist_alloc_with_allocator(hist_allocator_t *alloc);
+API_EXPORT(histogram_t *) hist_alloc_with_allocator(const hist_allocator_t *alloc);
 //! Create a new histogram with preallocated bins, uses custom allocator
-API_EXPORT(histogram_t *) hist_alloc_nbins_with_allocator(int nbins, hist_allocator_t *alloc);
+API_EXPORT(histogram_t *) hist_alloc_nbins_with_allocator(int nbins, const hist_allocator_t *alloc);
 //! Create a fast-histogram
 /*! Fast allocations consume 2kb + N * 512b more memory
  *  where N is the number of used exponents.  It allows for O(1) increments for
  *  prexisting keys, uses custom allocator */
-API_EXPORT(histogram_t *) hist_fast_alloc_with_allocator(hist_allocator_t *alloc);
+API_EXPORT(histogram_t *) hist_fast_alloc_with_allocator(const hist_allocator_t *alloc);
 //! Create a fast-histogram with preallocated bins, uses custom allocator
-API_EXPORT(histogram_t *) hist_fast_alloc_nbins_with_allocator(int nbins, hist_allocator_t *alloc);
+API_EXPORT(histogram_t *) hist_fast_alloc_nbins_with_allocator(int nbins, const hist_allocator_t *alloc);
 //! Create an exact copy of other, uses custom allocator
-API_EXPORT(histogram_t *) hist_clone_with_allocator(histogram_t *other, hist_allocator_t *alloc);
+API_EXPORT(histogram_t *) hist_clone_with_allocator(const histogram_t *other, const hist_allocator_t *alloc);
 
 //! Free a (fast-) histogram, frees with allocator chosen during the alloc/clone
 API_EXPORT(void) hist_free(histogram_t *hist);
@@ -202,7 +202,7 @@ API_EXPORT(void) hist_remove_zeroes(histogram_t *h);
 //! \param hist
 //! \param mbe the Minimum Bucket Exponent
 //! \return the compressed histogram as new value
-API_EXPORT(histogram_t *) hist_compress_mbe(histogram_t *h, int8_t mbe);
+API_EXPORT(histogram_t *) hist_compress_mbe(const histogram_t *h, int8_t mbe);
 
 ////////////////////////////////////////////////////////////////////////////////
 // Analytics

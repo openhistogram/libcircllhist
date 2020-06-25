@@ -45,7 +45,7 @@
 
 #include "circllhist.h"
 
-hist_allocator_t default_allocator = {
+const hist_allocator_t default_allocator = {
   .malloc = malloc,
   .calloc = calloc,
   .free = free
@@ -145,7 +145,7 @@ struct histogram {
   uint16_t allocd; //!< number of allocated bv pairs
   uint16_t used;   //!< number of used bv pairs
   uint32_t fast: 1;
-  hist_allocator_t *allocator;
+  const hist_allocator_t *allocator;
   struct hist_bv_pair *bvs; //!< pointer to bv-pairs
 };
 
@@ -1365,7 +1365,7 @@ hist_alloc(void) {
 }
 
 histogram_t *
-hist_alloc_with_allocator(hist_allocator_t *allocator) {
+hist_alloc_with_allocator(const hist_allocator_t *allocator) {
   return hist_alloc_nbins_with_allocator(0, allocator);
 }
 
@@ -1375,7 +1375,7 @@ hist_alloc_nbins(int nbins) {
 }
 
 histogram_t *
-hist_alloc_nbins_with_allocator(int nbins, hist_allocator_t *allocator) {
+hist_alloc_nbins_with_allocator(int nbins, const hist_allocator_t *allocator) {
   histogram_t *tgt;
   if(nbins < 1) nbins = DEFAULT_HIST_SIZE;
   if(nbins > MAX_HIST_BINS) nbins = MAX_HIST_BINS;
@@ -1392,7 +1392,7 @@ hist_fast_alloc(void) {
 }
 
 histogram_t *
-hist_fast_alloc_with_allocator(hist_allocator_t *allocator) {
+hist_fast_alloc_with_allocator(const hist_allocator_t *allocator) {
   return hist_fast_alloc_nbins_with_allocator(0, allocator);
 }
 
@@ -1402,7 +1402,7 @@ hist_fast_alloc_nbins(int nbins) {
 }
 
 histogram_t *
-hist_fast_alloc_nbins_with_allocator(int nbins, hist_allocator_t *allocator) {
+hist_fast_alloc_nbins_with_allocator(int nbins, const hist_allocator_t *allocator) {
   struct histogram_fast *tgt;
   if(nbins < 1) nbins = DEFAULT_HIST_SIZE;
   if(nbins > MAX_HIST_BINS) nbins = MAX_HIST_BINS;
@@ -1415,12 +1415,12 @@ hist_fast_alloc_nbins_with_allocator(int nbins, hist_allocator_t *allocator) {
 }
 
 histogram_t *
-hist_clone(histogram_t *other) {
+hist_clone(const histogram_t *other) {
   return hist_clone_with_allocator(other, &default_allocator);
 }
 
 histogram_t *
-hist_clone_with_allocator(histogram_t *other, hist_allocator_t *allocator)
+hist_clone_with_allocator(const histogram_t *other, const hist_allocator_t *allocator)
 {
   histogram_t *tgt = NULL;
   int i = 0;
@@ -1446,7 +1446,7 @@ hist_clone_with_allocator(histogram_t *other, hist_allocator_t *allocator)
 void
 hist_free(histogram_t *hist) {
   if(hist == NULL) return;
-  hist_allocator_t *a = hist->allocator;
+  const hist_allocator_t *a = hist->allocator;
   if(hist->bvs != NULL) a->free(hist->bvs);
   if(hist->fast) {
     int i;
@@ -1458,7 +1458,7 @@ hist_free(histogram_t *hist) {
 }
 
 histogram_t *
-hist_compress_mbe(histogram_t *hist, int8_t mbe) {
+hist_compress_mbe(const histogram_t *hist, int8_t mbe) {
   histogram_t *hist_compressed = hist_alloc();
   if(!hist) return hist_compressed;
   int total = hist_bucket_count(hist);
