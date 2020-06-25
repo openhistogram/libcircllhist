@@ -26,7 +26,7 @@ void help(const char *prog) {
   printf("\tand the p0, p50, p99, p99.999, and p100\n");
 }
 
-void print_hist(histogram_t *hist) {
+void print_hist(const histogram_t *hist) {
   printf("{");
   int cnt = hist_bucket_count(hist);
   for(int i=0; i<cnt; i++) {
@@ -38,7 +38,7 @@ void print_hist(histogram_t *hist) {
   printf("}\n");
 }
 
-histogram_t *decode(char *buff) {
+histogram_t *decode(const char *buff) {
   histogram_t *hist = hist_alloc();
   if(hist_deserialize_b64(hist, buff, strlen(buff)) <= -1) {
     fprintf(stderr, "histogram invalid\n");
@@ -68,7 +68,7 @@ void add_to(struct calcs *c, double v) {
   c->elements[c->cnt++] = v;
 }
 
-void print(histogram_t *hist) {
+void print(const histogram_t *hist) {
   int i;
   if(above.cnt || below.cnt || quantiles.cnt) {
     printf("{");
