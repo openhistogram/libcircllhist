@@ -7,10 +7,10 @@ setup(
     name="circllhist",
     long_description=long_description,
     version="0.3.0",
-    description="Circonus log-linear histogram library",
+    description="OpenHistogram log-linear histogram library",
     maintainer="Heinrich Hartmann",
     maintainer_email="heinrich.hartmann@circonus.com",
-    url="https://github.com/circonus-labs/libcircllhist",
+    url="https://github.com/openhistogram/libcircllhist",
     install_requires=['cffi'],
     packages=['circllhist'],
 )
