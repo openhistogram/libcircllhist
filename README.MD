@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/openhistogram/libcircllhist.svg?branch=master)](https://travis-ci.org/openhistogram/libcircllhist)
 
-An implementation of Openhistogram log-linear histograms.
+An implementation of OpenHistogram log-linear histograms.
 
 ## Installing
 
