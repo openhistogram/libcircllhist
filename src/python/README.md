@@ -2,7 +2,7 @@
 
 This package requires the libcircllhist C library to be installed on your system:
 
-https://github.com/circonus-labs/libcircllhist/
+https://github.com/openhistogram/libcircllhist/
 
 The bindings itself can be installed via pip:
 

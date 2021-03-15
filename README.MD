@@ -1,8 +1,8 @@
 # libcircllhist
 
-[![Build Status](https://travis-ci.org/circonus-labs/libcircllhist.svg?branch=master)](https://travis-ci.org/circonus-labs/libcircllhist)
+[![Build Status](https://travis-ci.org/openhistogram/libcircllhist.svg?branch=master)](https://travis-ci.org/openhistogram/libcircllhist)
 
-An implementation of Circonus log-linear histograms.
+An implementation of OpenHistogram log-linear histograms.
 
 ## Installing
 
@@ -26,7 +26,7 @@ This requires doxygen to be available on your system.
 
 ## Python bindings
 
-Build and install the C library as described above.
+This repository contains [python bindings](/src/python) for libcircllhist.  Build and install the C library as described above.
 Then use the following command to install the python library.
 
     cd src/python

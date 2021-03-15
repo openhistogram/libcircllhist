@@ -26,7 +26,7 @@ if not C:
     print("""
 
 libcircllhist.so was not found on your system.
-Please install libcircllhist from: https://github.com/circonus-labs/libcircllhist/
+Please install libcircllhist from: https://github.com/openhistogram/libcircllhist/
 
     """)
     ffi.dlopen("libcircllhist.so")
