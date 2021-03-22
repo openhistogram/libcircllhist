@@ -12,8 +12,9 @@ ${STDIN}
 C = None
 for path in [ # Search for libcircllhist.so
     "./libcircllhist.so", # 1. cwd
-    "/opt/circonus/lib/libcircllhist.so", # 2. vendor path
-    "libcircllhist.so" # 3. system paths via ld.so
+    "/usr/local/lib/libcircllhist.so", # 2. default path
+    "/opt/circonus/lib/libcircllhist.so", # 3. vendor path
+    "libcircllhist.so" # 4. system paths via ld.so
     ]:
     try:
         C = ffi.dlopen(path)

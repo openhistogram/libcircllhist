@@ -17,7 +17,9 @@ from this folder.
 ## Usage Example
 
 ```
-h = Circllhist()
+import circllhist
+
+h = circllhist.Circllhist()
 h.insert(123,3)        # Insert value 123, three times
 h.insert_intscale(1,1) # Insert 1x10^1
 print(h.count())
