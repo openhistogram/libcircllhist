@@ -41,7 +41,7 @@ This requires doxygen to be available on your system.
 
 This repository contains [Python bindings](/src/python) for libcircllhist.
 Build and install the C library as described above. Then use the following
-command to install the python library.
+commands to install the python library.
 
     cd src/python
     python setup.py install
@@ -63,4 +63,3 @@ distributions.  To specify an alternate library directory, use
 `--libdir=<path>` with configure. For example:
 
     ./configure --libdir=/usr/local/lib64
-
