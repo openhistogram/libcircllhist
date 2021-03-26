@@ -5,24 +5,23 @@ pushd `dirname $0`
 export LD_LIBRARY_PATH=..:/opt/circonus/lib/amd64:/opt/circonus/lib
 export DYLD_LIBRARY_PATH=..:/opt/circonus/lib/amd64:/opt/circonus/lib
 
-# force our known luajit to the front of the queue
-export PATH=/opt/circonus/bin:$PATH
 
 echo "Running C tests"
 ./histogram_test
 
-if command -v luajit || [ ! -z "$LUA_BIN" ]
-then # lua in path or explicitly speficied
-    LUA_BIN="$(command -v luajit)"
-else # search default locations
-    case $(uname) in
-        SunOS)
-            LUA_BIN=${LUA_BIN:-"/opt/circonus/bin/luajit"}
-            ;;
-        Linux)
-            LUA_BIN=${LUA_BIN:-"/usr/local/bin/luajit"}
-            ;;
-    esac
+
+echo "Running LuaJIT tests"
+CIRC_LUA="/opt/circonus/bin/luajit"
+if [ -z "$LUA_BIN" ]
+then
+    set +e
+    if [ -x "$CIRC_LUA" ]
+    then
+        LUA_BIN=$CIRC_LUA
+    else
+        LUA_BIN="$(command -v luajit)"
+    fi
+    set -e
 fi
 
 if [ -x "$LUA_BIN" ]
@@ -58,17 +57,20 @@ $LUA_BIN $LUA_ARGS -l histogram_c_test -e "histogram_c_test.runTests()"
 echo "Lua circllhist_test"
 $LUA_BIN $LUA_ARGS -l circllhist_test -e "circllhist_test.runTests()"
 
+
+echo "Running Python tests"
 pushd ../python
 
-CIRC_PYTHON=/opt/circonus/python27/bin/python
 if [ -z "$PYTHON_BIN" ]
 then
-    if [ -x "$CIRC_PYTHON" ]
+    set +e
+    PYTHON_BIN="$(command -v python3)"
+
+    if [ ! -x "$PYTHON_BIN" ]
     then
-        PYTHON_BIN=$CIRC_PYTHON
-    else
         PYTHON_BIN="$(command -v python)"
     fi
+    set -e
 fi
 
 if [ -x "$PYTHON_BIN" ]
@@ -80,7 +82,7 @@ else
     exit 1
 fi
 
-echo "Running: $ $PYTHON_BIN test.py"
+echo "Running: $PYTHON_BIN test.py"
 $PYTHON_BIN test.py
 
 popd
