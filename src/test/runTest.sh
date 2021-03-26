@@ -64,11 +64,11 @@ pushd ../python
 if [ -z "$PYTHON_BIN" ]
 then
     set +e
-    PYTHON_BIN="$(command -v python3)"
+    PYTHON_BIN="$(command -v python)"
 
     if [ ! -x "$PYTHON_BIN" ]
     then
-        PYTHON_BIN="$(command -v python)"
+        PYTHON_BIN="$(command -v python3)"
     fi
     set -e
 fi
