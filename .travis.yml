@@ -1,6 +1,9 @@
 os:
   - linux
 
+dist:
+  - focal
+
 compiler:
   - gcc
 
@@ -9,11 +12,11 @@ language:
 
 python:
   - "2.7"
-  - "3.6"
+  - "3.8"
 
 before_script:
   - sudo apt-get update -qq
-  - sudo apt-get install luajit -y
+  - sudo apt-get install luajit python3-cffi -y
 
 script:
   - buildtools/install-dependencies.sh
