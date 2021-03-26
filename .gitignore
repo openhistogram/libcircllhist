@@ -28,4 +28,8 @@ src/test/histogram_test
 src/test/histogram_perf
 src/circllhist.ffi.h
 src/lua/ffi_libcircllhist.lua
+src/python/build
+src/python/circllhist/__pycache__
+src/python/circllhist.egg-info
 src/python/circllhist/ffi.py
+src/python/dist

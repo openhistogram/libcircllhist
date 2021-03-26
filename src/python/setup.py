@@ -6,11 +6,19 @@ with open('README.md') as file:
 setup(
     name="circllhist",
     long_description=long_description,
-    version="0.3.0",
+    long_description_content_type='text/markdown',
+    version="0.3.1",
     description="OpenHistogram log-linear histogram library",
-    maintainer="Heinrich Hartmann",
-    maintainer_email="heinrich.hartmann@circonus.com",
+    maintainer="Circonus Packaging",
+    maintainer_email="packaging@circonus.com",
     url="https://github.com/openhistogram/libcircllhist",
     install_requires=['cffi'],
     packages=['circllhist'],
+    classifiers=[
+        "Programming Language :: Python :: 2.7",
+        "Programming Language :: Python :: 3",
+        "License :: OSI Approved :: BSD License",
+        "Operating System :: POSIX"
+    ],
+    python_requires=">=2.7",
 )
