@@ -7,7 +7,7 @@ setup(
     name="circllhist",
     long_description=long_description,
     long_description_content_type='text/markdown',
-    version="0.3.1",
+    version="0.3.2",
     description="OpenHistogram log-linear histogram library",
     maintainer="Circonus Packaging",
     maintainer_email="packaging@circonus.com",
@@ -17,7 +17,7 @@ setup(
     classifiers=[
         "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3",
-        "License :: OSI Approved :: BSD License",
+        "License :: OSI Approved :: Apache Software License",
         "Operating System :: POSIX"
     ],
     python_requires=">=2.7",
