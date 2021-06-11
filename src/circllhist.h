@@ -204,6 +204,11 @@ API_EXPORT(double) hist_approx_stddev(const histogram_t *);
 //! \param hist
 //! \param k
 API_EXPORT(double) hist_approx_moment(const histogram_t *hist, double k);
+//! Modifies the histogram to remove all counts for sample with values outside the provided range.
+//! \param hist
+//! \param lower
+//! \param upper
+API_EXPORT(void) hist_clamp(histogram_t *hist, double lower, double upper);
 //! Returns the number of values in buckets that are entirely lower than or equal to threshold
 //! \param hist
 //! \param threshold

@@ -582,6 +582,29 @@ hist_approx_moment(const histogram_t *hist, double k) {
   return sk / pow(total_count, k);
 }
 
+void
+hist_clamp(histogram_t *hist, double lower, double upper) {
+  int needs_cull = 0;
+  if(!hist) return;
+  ASSERT_GOOD_HIST(hist);
+  for(int i=0; i<hist->used; i++) {
+    if(hist_bucket_isnan(hist->bvs[i].bucket)) continue;
+    double bucket_lower = hist_bucket_to_double(hist->bvs[i].bucket);
+    double bucket_upper;
+    if(bucket_lower < 0) {
+      bucket_upper = bucket_lower;
+      bucket_lower = bucket_upper - hist_bucket_to_double_bin_width(hist->bvs[i].bucket);
+    } else {
+      bucket_upper = bucket_lower + hist_bucket_to_double_bin_width(hist->bvs[i].bucket);
+    }
+    if(upper < bucket_lower || lower > bucket_upper) {
+      needs_cull = 1;
+      hist->bvs[i].count = 0;
+    }
+  }
+  if(needs_cull) hist_remove_zeroes(hist);
+}
+
 uint64_t
 hist_approx_count_below(const histogram_t *hist, double threshold) {
   int i;
