@@ -10,11 +10,18 @@ ffi.cdef("""
 ${STDIN}
 """)
 C = None
+
+import platform
+plt = platform.system()
+libext = ".so"
+if plt == "Darwin":
+    libext = ".dylib"
+
 for path in [ # Search for libcircllhist.so
-    "./libcircllhist.so", # 1. cwd
-    "/usr/local/lib/libcircllhist.so", # 2. default path
-    "/opt/circonus/lib/libcircllhist.so", # 3. vendor path
-    "libcircllhist.so" # 4. system paths via ld.so
+    "./libcircllhist" + libext, # 1. cwd
+    "/usr/local/lib/libcircllhist" + libext, # 2. default path
+    "/opt/circonus/lib/libcircllhist" + libext, # 3. vendor path
+    "libcircllhist" + libext # 4. system paths via ld.so
     ]:
     try:
         C = ffi.dlopen(path)
