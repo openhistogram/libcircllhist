@@ -72,6 +72,7 @@ SHLDFLAGS+=-current_version $(LIBCIRCLLHIST_VERSION) -install_name $(libdir)/$(L
 endif
 
 LUA_FFI=lua/ffi_libcircllhist.lua
+LUA_WRAPPER=lua/circllhist.lua
 PYTHON_FFI=python/circllhist/ffi.py
 
 TARGETS=$(LIBCIRCLLHISTA) $(LIBCIRCLLHIST) circllhist_print $(LUA_FFI) $(PYTHON_FFI) test/histogram_test test/histogram_perf
@@ -152,7 +153,8 @@ install-libs:    $(LIBCIRCLLHIST) $(LUA_FFI)
 	$(INSTALL) -m 0755 $(LIBCIRCLLHIST_V) $(DESTDIR)$(libdir)/$(LIBCIRCLLHIST_V)
 	$(INSTALL) -m 0755 $(LIBCIRCLLHISTA) $(DESTDIR)$(libdir)/$(LIBCIRCLLHISTA)
 	ln -sf $(LIBCIRCLLHIST_V) $(DESTDIR)$(libdir)/$(LIBCIRCLLHIST)
-	$(INSTALL) -m 0755 $(LUA_FFI) $(DESTDIR)$(datadir)/lua/5.1/
+	$(INSTALL) -m 0644 $(LUA_FFI) $(DESTDIR)$(datadir)/lua/5.1/
+	$(INSTALL) -m 0644 $(LUA_WRAPPER) $(DESTDIR)$(datadir)/lua/5.1/
 
 install-prog:
 	$(top_srcdir)/buildtools/mkinstalldirs $(DESTDIR)$(bindir)
