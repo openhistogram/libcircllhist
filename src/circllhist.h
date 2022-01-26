@@ -1,33 +1,20 @@
 /** \file circllhist.h */
 /*
- * Copyright (c) 2016, Circonus, Inc. All rights reserved.
+ * Copyright (c) 2016-2021, Circonus, Inc.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are
- * met:
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above
- *       copyright notice, this list of conditions and the following
- *       disclaimer in the documentation and/or other materials provided
- *       with the distribution.
- *     * Neither the name Circonus, Inc. nor the names of its contributors
- *       may be used to endorse or promote products derived from this
- *       software without specific prior written permission.
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
+
 
 /*! \mainpage A C implementation of Circonus log-linear histograms
 * \ref circllhist.h
@@ -119,21 +106,21 @@ API_EXPORT(histogram_t *) hist_fast_alloc(void);
 //! Create a fast-histogram with preallocated bins, uses default allocator
 API_EXPORT(histogram_t *) hist_fast_alloc_nbins(int nbins);
 //! Create an exact copy of other, uses default allocator
-API_EXPORT(histogram_t *) hist_clone(histogram_t *other);
+API_EXPORT(histogram_t *) hist_clone(const histogram_t *other);
 
 //! Create a new histogram, uses custom allocator
-API_EXPORT(histogram_t *) hist_alloc_with_allocator(hist_allocator_t *alloc);
+API_EXPORT(histogram_t *) hist_alloc_with_allocator(const hist_allocator_t *alloc);
 //! Create a new histogram with preallocated bins, uses custom allocator
-API_EXPORT(histogram_t *) hist_alloc_nbins_with_allocator(int nbins, hist_allocator_t *alloc);
+API_EXPORT(histogram_t *) hist_alloc_nbins_with_allocator(int nbins, const hist_allocator_t *alloc);
 //! Create a fast-histogram
 /*! Fast allocations consume 2kb + N * 512b more memory
  *  where N is the number of used exponents.  It allows for O(1) increments for
  *  prexisting keys, uses custom allocator */
-API_EXPORT(histogram_t *) hist_fast_alloc_with_allocator(hist_allocator_t *alloc);
+API_EXPORT(histogram_t *) hist_fast_alloc_with_allocator(const hist_allocator_t *alloc);
 //! Create a fast-histogram with preallocated bins, uses custom allocator
-API_EXPORT(histogram_t *) hist_fast_alloc_nbins_with_allocator(int nbins, hist_allocator_t *alloc);
+API_EXPORT(histogram_t *) hist_fast_alloc_nbins_with_allocator(int nbins, const hist_allocator_t *alloc);
 //! Create an exact copy of other, uses custom allocator
-API_EXPORT(histogram_t *) hist_clone_with_allocator(histogram_t *other, hist_allocator_t *alloc);
+API_EXPORT(histogram_t *) hist_clone_with_allocator(const histogram_t *other, const hist_allocator_t *alloc);
 
 //! Free a (fast-) histogram, frees with allocator chosen during the alloc/clone
 API_EXPORT(void) hist_free(histogram_t *hist);
@@ -202,7 +189,7 @@ API_EXPORT(void) hist_remove_zeroes(histogram_t *h);
 //! \param hist
 //! \param mbe the Minimum Bucket Exponent
 //! \return the compressed histogram as new value
-API_EXPORT(histogram_t *) hist_compress_mbe(histogram_t *h, int8_t mbe);
+API_EXPORT(histogram_t *) hist_compress_mbe(const histogram_t *h, int8_t mbe);
 
 ////////////////////////////////////////////////////////////////////////////////
 // Analytics
@@ -217,6 +204,11 @@ API_EXPORT(double) hist_approx_stddev(const histogram_t *);
 //! \param hist
 //! \param k
 API_EXPORT(double) hist_approx_moment(const histogram_t *hist, double k);
+//! Modifies the histogram to remove all counts for sample with values outside the provided range.
+//! \param hist
+//! \param lower
+//! \param upper
+API_EXPORT(void) hist_clamp(histogram_t *hist, double lower, double upper);
 //! Returns the number of values in buckets that are entirely lower than or equal to threshold
 //! \param hist
 //! \param threshold

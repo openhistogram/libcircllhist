@@ -1,31 +1,17 @@
 /*
- * Copyright (c) 2012-2018, Circonus, Inc. All rights reserved.
+ * Copyright (c) 2016-2021, Circonus, Inc.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are
- * met:
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *     * Redistributions of source code must retain the above copyright
- *       notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above
- *       copyright notice, this list of conditions and the following
- *       disclaimer in the documentation and/or other materials provided
- *       with the distribution.
- *     * Neither the name Circonus, Inc. nor the names of its contributors
- *       may be used to endorse or promote products derived from this
- *       software without specific prior written permission.
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 #include <assert.h>
@@ -45,7 +31,7 @@
 
 #include "circllhist.h"
 
-hist_allocator_t default_allocator = {
+const hist_allocator_t default_allocator = {
   .malloc = malloc,
   .calloc = calloc,
   .free = free
@@ -145,7 +131,7 @@ struct histogram {
   uint16_t allocd; //!< number of allocated bv pairs
   uint16_t used;   //!< number of used bv pairs
   uint32_t fast: 1;
-  hist_allocator_t *allocator;
+  const hist_allocator_t *allocator;
   struct hist_bv_pair *bvs; //!< pointer to bv-pairs
 };
 
@@ -594,6 +580,29 @@ hist_approx_moment(const histogram_t *hist, double k) {
   }
   if(total_count == 0.0) return private_nan;
   return sk / pow(total_count, k);
+}
+
+void
+hist_clamp(histogram_t *hist, double lower, double upper) {
+  int needs_cull = 0;
+  if(!hist) return;
+  ASSERT_GOOD_HIST(hist);
+  for(int i=0; i<hist->used; i++) {
+    if(hist_bucket_isnan(hist->bvs[i].bucket)) continue;
+    double bucket_lower = hist_bucket_to_double(hist->bvs[i].bucket);
+    double bucket_upper;
+    if(bucket_lower < 0) {
+      bucket_upper = bucket_lower;
+      bucket_lower = bucket_upper - hist_bucket_to_double_bin_width(hist->bvs[i].bucket);
+    } else {
+      bucket_upper = bucket_lower + hist_bucket_to_double_bin_width(hist->bvs[i].bucket);
+    }
+    if(upper < bucket_lower || lower > bucket_upper) {
+      needs_cull = 1;
+      hist->bvs[i].count = 0;
+    }
+  }
+  if(needs_cull) hist_remove_zeroes(hist);
 }
 
 uint64_t
@@ -1409,7 +1418,7 @@ hist_alloc(void) {
 }
 
 histogram_t *
-hist_alloc_with_allocator(hist_allocator_t *allocator) {
+hist_alloc_with_allocator(const hist_allocator_t *allocator) {
   return hist_alloc_nbins_with_allocator(0, allocator);
 }
 
@@ -1419,7 +1428,7 @@ hist_alloc_nbins(int nbins) {
 }
 
 histogram_t *
-hist_alloc_nbins_with_allocator(int nbins, hist_allocator_t *allocator) {
+hist_alloc_nbins_with_allocator(int nbins, const hist_allocator_t *allocator) {
   histogram_t *tgt;
   if(nbins < 1) nbins = DEFAULT_HIST_SIZE;
   if(nbins > MAX_HIST_BINS) nbins = MAX_HIST_BINS;
@@ -1436,7 +1445,7 @@ hist_fast_alloc(void) {
 }
 
 histogram_t *
-hist_fast_alloc_with_allocator(hist_allocator_t *allocator) {
+hist_fast_alloc_with_allocator(const hist_allocator_t *allocator) {
   return hist_fast_alloc_nbins_with_allocator(0, allocator);
 }
 
@@ -1446,7 +1455,7 @@ hist_fast_alloc_nbins(int nbins) {
 }
 
 histogram_t *
-hist_fast_alloc_nbins_with_allocator(int nbins, hist_allocator_t *allocator) {
+hist_fast_alloc_nbins_with_allocator(int nbins, const hist_allocator_t *allocator) {
   struct histogram_fast *tgt;
   if(nbins < 1) nbins = DEFAULT_HIST_SIZE;
   if(nbins > MAX_HIST_BINS) nbins = MAX_HIST_BINS;
@@ -1459,12 +1468,12 @@ hist_fast_alloc_nbins_with_allocator(int nbins, hist_allocator_t *allocator) {
 }
 
 histogram_t *
-hist_clone(histogram_t *other) {
+hist_clone(const histogram_t *other) {
   return hist_clone_with_allocator(other, &default_allocator);
 }
 
 histogram_t *
-hist_clone_with_allocator(histogram_t *other, hist_allocator_t *allocator)
+hist_clone_with_allocator(const histogram_t *other, const hist_allocator_t *allocator)
 {
   histogram_t *tgt = NULL;
   int i = 0;
@@ -1490,7 +1499,7 @@ hist_clone_with_allocator(histogram_t *other, hist_allocator_t *allocator)
 void
 hist_free(histogram_t *hist) {
   if(hist == NULL) return;
-  hist_allocator_t *a = hist->allocator;
+  const hist_allocator_t *a = hist->allocator;
   if(hist->bvs != NULL) a->free(hist->bvs);
   if(hist->fast) {
     int i;
@@ -1502,7 +1511,7 @@ hist_free(histogram_t *hist) {
 }
 
 histogram_t *
-hist_compress_mbe(histogram_t *hist, int8_t mbe) {
+hist_compress_mbe(const histogram_t *hist, int8_t mbe) {
   histogram_t *hist_compressed = hist_alloc();
   if(!hist) return hist_compressed;
   int total = hist_bucket_count(hist);

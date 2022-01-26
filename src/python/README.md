@@ -1,10 +1,11 @@
 # Python bindings for libcircllhist
 
-This package requires the libcircllhist C library to be installed on your system:
+This package requires the [OpenHistogram](https://openhistogram.io) C library,
+libcircllhist, to be installed on your system:
 
-https://github.com/circonus-labs/libcircllhist/
+https://github.com/openhistogram/libcircllhist/
 
-The bindings itself can be installed via pip:
+The bindings themselves can be installed via pip:
 
     pip install circllhist
 
@@ -17,9 +18,11 @@ from this folder.
 ## Usage Example
 
 ```
-h = Circllhist()
+import circllhist
+
+h = circllhist.Circllhist()
 h.insert(123,3)        # Insert value 123, three times
 h.insert_intscale(1,1) # Insert 1x10^1
-print(h.count())
-print(h.sum())
+print(h.count())       # Print the count of used bins
+print(h.sum())         # Print the sum of all values
 ```

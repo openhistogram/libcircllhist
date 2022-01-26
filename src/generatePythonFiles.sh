@@ -10,10 +10,18 @@ ffi.cdef("""
 ${STDIN}
 """)
 C = None
+
+import platform
+plt = platform.system()
+libext = ".so"
+if plt == "Darwin":
+    libext = ".dylib"
+
 for path in [ # Search for libcircllhist.so
-    "./libcircllhist.so", # 1. cwd
-    "/opt/circonus/lib/libcircllhist.so", # 2. vendor path
-    "libcircllhist.so" # 3. system paths via ld.so
+    "./libcircllhist" + libext, # 1. cwd
+    "/usr/local/lib/libcircllhist" + libext, # 2. default path
+    "/opt/circonus/lib/libcircllhist" + libext, # 3. vendor path
+    "libcircllhist" + libext # 4. system paths via ld.so
     ]:
     try:
         C = ffi.dlopen(path)
@@ -26,7 +34,7 @@ if not C:
     print("""
 
 libcircllhist.so was not found on your system.
-Please install libcircllhist from: https://github.com/circonus-labs/libcircllhist/
+Please install libcircllhist from: https://github.com/openhistogram/libcircllhist/
 
     """)
     ffi.dlopen("libcircllhist.so")
