@@ -14,6 +14,7 @@ class TestHistogram(unittest.TestCase):
         self.assertAlmostEqual(h.sum(), 384.87619047)
         self.assertAlmostEqual(h.mean(), 96.2190476)
         self.assertAlmostEqual(h.quantile(0.5), 122.5, 1)
+        self.assertAlmostEqual(h.quantile(0.5, qtype=7), 122.5, 1)
         self.assertTrue(str(h))
         g = Circllhist.from_dict(h.to_dict())
         self.assertEqual(h.sum(), g.sum())

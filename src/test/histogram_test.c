@@ -271,6 +271,28 @@ void q_test(double *vals, int nvals, double *in, int nin, double *expected) {
   free(out);
 }
 
+void q7_test(double *vals, int nvals, double *in, int nin, double *expected) {
+  double *out;
+  histogram_t *h = build(vals, nvals);
+  out = calloc(nin, sizeof(*out));
+  int rv = hist_approx_quantile7(h, in, nin, out);
+  if(rv != 0) notokf("quantile7 -> %d", rv);
+  else {
+    int i;
+    for(i=0;i<nin;i++) {
+      if(!double_equals(out[i], expected[i])) {
+        notokf("q(%f) -> %g != %g", in[i], out[i], expected[i]);
+        free(out);
+        return;
+      }
+    }
+    ok();
+  }
+  hist_free(h);
+  free(out);
+}
+
+
 void simple_clear() {
   histogram_t *h = hist_alloc();
   double out[1], in[1] = {0};
@@ -620,43 +642,63 @@ int main() {
 
     double h[] = { 1 };
     double qin[] = { 0, 0.25, 0.5, 1 };
-    double qout[] = { 1.05, 1.05, 1.05, 1.05 };
+    double qout[] = { 1.05, 1.05,   1.05,  1.05 };
     T(q_test(h, 1, qin, 4, qout));
+    T(q7_test(h, 1, qin, 4, qout));
 
-    double h_1[] = { 1,1 };
-    double qin_1[] = { 0, 1 };
-    double qout_1[] = { 1+0.1/3, 1+0.2/3 };
-    T(q_test(h_1, 2, qin_1, 2, qout_1));
+    double h_1[] = { 1, 1 };
+    double a=1+0.1*1/3, b = 1+0.1*2/3;
+    double qin_1[] =  { 0, .25, .5, .75, 1 };
+    double qout_1[]  = { a, a, a, b, b };
+    double q7out_1[] = { a, a, a, a, b };
+    T(q_test(h_1, 2, qin_1, 5, qout_1));
+    T(q7_test(h_1, 2, qin_1, 5, q7out_1));
 
     double h_2[] = { 1,1,1 };
     double qin_2[] = { 0, .5, 1 };
     double qout_2[] = { 1.025, 1.05, 1.075 };
     T(q_test(h_2, 3, qin_2, 3, qout_2));
+    T(q7_test(h_2, 3, qin_2, 3, qout_2));
 
     double qin2[] = { 0, 0.95, 0.99, 1.0 };
     double qout2[] = { 0, 0.435, 0.435, 0.435 };
+    double q7out2[] = { 0, 0.416667, 0.416667, 0.435 };
     T(q_test(s1, 9, qin2, 4, qout2));
+    T(q7_test(s1, 9, qin2, 4, q7out2));
 
     double s3[] = { 1.0, 2.0 };
     double qin3[] = { 0.5 };
     double qout3[] = { 1.05 };
+    double q7out3[] = { 1.05 };
     T(q_test(s3, 2, qin3, 1, qout3));
+    T(q7_test(s3, 2, qin3, 1, q7out3));
 
     double s4[] = { 1.0, 1e200 }; // out of range -> nan bucket
     double qin4[] = { 0, 1 };
     double qout4[] = { 1.05, 1.05 };
     T(q_test(s4, 2, qin4, 2, qout4));
+    T(q7_test(s4, 2, qin4, 2, qout4));
     T(mean_test(s4, 2, 1.04762));
 
     double s5[] = { 1e200, 1e200, 1e200,  0, 0, 1e-20, 1e-20, 1e-20, 1e-10};
     double qin5[] = { 0, 1 };
     double qout5[] = { 0, 1.05e-10 };
     T(q_test(s5, 9, qin5, 2, qout5));
+    T(q7_test(s5, 9, qin5, 2, qout5));
 
     double s6[] = { 0, 1 };
-    double qin6[] = { 0, 0.1 };
-    double qout6[] = { 0, 0 };
+    double qin6[] = { 0, 0.1, 0.499, 0.501, 0.9 , 1 };
+    double qout6[] = { 0, 0,  0,     1,     1,    1 };
+    double q7out6[] = { 0, 0, 0,     0,     0,    1 };
     T(q_test(s6, 2, qin6, 2, qout6));
+    T(q7_test(s6, 2, qin6, 2, q7out6));
+
+    double h7[] = { 10, 100 };
+    double qin7[]   = {  0,    0.1, 0.499, .501,  .9,   1 };
+    double qout7[]  = { 10.5, 10.5, 10.5,  105,   105,  105 };
+    double q7out7[] = { 10.5, 10.5, 10.5,  10.5,  10.5, 105 };
+    T(q_test(h7, 2, qin7, 6, qout7));
+    T(q7_test(h7, 2, qin7, 6, q7out7));
 
     T(serialize_test());
 

@@ -678,13 +678,18 @@ hist_approx_count_nearby(const histogram_t *hist, double value) {
   return 0;
 }
 
+typedef enum {
+  QTYPE1 = 1,
+  QTYPE7 = 7
+} qtype_t;
+
 /* 0 success,
  * -1 (empty histogram),
  * -2 (out of order quantile request)
  * -3 (out of bound quantile)
  */
-int
-hist_approx_quantile(const histogram_t *hist, const double *q_in, int nq, double *q_out) {
+static inline int
+hist_approx_quantile_dispatch(const histogram_t *hist, const double *q_in, int nq, double *q_out, qtype_t qtype) {
   int i_q, i_b;
   double total_cnt = 0.0, bucket_width = 0.0,
          bucket_left = 0.0, lower_cnt = 0.0, upper_cnt = 0.0;
@@ -717,7 +722,14 @@ hist_approx_quantile(const histogram_t *hist, const double *q_in, int nq, double
   /* We use q_out as temporary space to hold the count-normalized quantiles */
   for (i_q=0;i_q<nq;i_q++) {
     if(q_in[i_q] < 0.0 || q_in[i_q] > 1.0) return -3;
-    q_out[i_q] = total_cnt * q_in[i_q];
+    switch (qtype) {
+    case QTYPE1:
+      q_out[i_q] = total_cnt * q_in[i_q];
+      break;
+    case QTYPE7:
+      q_out[i_q] = floor( (total_cnt - 1) * q_in[i_q]  + 1 );
+      break;
+    }
   }
 
 
@@ -763,30 +775,62 @@ hist_approx_quantile(const histogram_t *hist, const double *q_in, int nq, double
        *
        * [ Variant: The ML estimator for the bucket position is
        *            at (k-1)/(n-1) for n>1 and 1/2 if n=1 ]
-       *
-       * A q-quantile for the bucket, will be represented by the sample number:
-       *
-       *  (q = 0)  k = 1
-       *  (q > 1)  k = ceil(q*n)
-       *
-       * so that q=0 => k=1 and q=1 => k=n. This corresponds to Type=1 quantiles
-       * in the Hyndman-Fan list (Statistical Computing, 1996).
-       *
        */
       uint64_t n = hist->bvs[i_b].count;
-      double qn = q_out[i_q]; // this corresponds to q * n above
-      assert(qn >= lower_cnt);
-      assert(qn <= upper_cnt);
-      if (qn == lower_cnt) { // q = 0
-        q_out[i_q] = bucket_left + ((double)1)/(n+1) * bucket_width;
-      }
-      else { // q > 0
-        double k = ceil(qn - lower_cnt);
-        q_out[i_q] = bucket_left + ((double)k)/(n+1) * bucket_width;
+      double k;
+      switch (qtype) {
+      case QTYPE1:
+        /*
+         * For Type 1 Quantiles:
+         * A q-quantile for the bucket, will be represented by the sample number:
+         *
+         *  (q = 0)  k = 1
+         *  (q > 0)  k = ceil(q*n)
+         *
+         * so that q=0 => k=1 and q=1 => k=n. This corresponds to Type=1 quantiles
+         * in the Hyndman-Fan list (Statistical Computing, 1996).
+         */
+        ;
+        double qn = q_out[i_q];
+        assert(qn >= lower_cnt);
+        assert(qn <= upper_cnt);
+        k = ceil(qn - lower_cnt);
+        if (k == 0) { // case q == 0 above
+          q_out[i_q] = bucket_left + 1.0/(n+1) * bucket_width;
+        }
+        else { // case q > 0 above
+          q_out[i_q] = bucket_left + k/(n+1) * bucket_width;
+        }
+        break;
+      case QTYPE7:
+        /*
+         * For Type 7 Quantiles, we consider samples at indices:
+         *
+         *  k = floor( q*(n-1) + 1 )
+         *
+         * This corresponds to discretized Type=7 quantiles in
+         * the Hyndman-Fan list (Statistical Computing,
+         * 1996).
+         */
+        ;
+        k = q_out[i_q] - lower_cnt;
+        q_out[i_q] = bucket_left + k/(n+1) * bucket_width;
+        break;
       }
     }
   }
   return 0;
+}
+
+int
+hist_approx_quantile(const histogram_t *hist, const double *q_in, int nq, double *q_out) {
+  return hist_approx_quantile_dispatch(hist, q_in, nq, q_out, QTYPE1);
+}
+
+
+int
+hist_approx_quantile7(const histogram_t *hist, const double *q_in, int nq, double *q_out) {
+  return hist_approx_quantile_dispatch(hist, q_in, nq, q_out, QTYPE7);
 }
 
 hist_bucket_t

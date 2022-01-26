@@ -158,6 +158,37 @@ function tests.quantile_multi_bin_3(scratch)
   end
 end
 
+function tests.quantile7(scratch)
+  local hist = scratch.hist
+  hist:insert(1, 1)
+  hist:insert(2, 1)
+  hist:insert(3, 1)
+  hist:insert(4, 1)
+  local q  = {  0/4, 1/4, 2/4, 3/4, 4/4 }
+  local Z1 = {  1.05,   1.05,   2.05,   3.05,   4.05 }
+  local Z7 = {  1.05,   1.05,   2.05,   3.05,   4.05 }
+  local Y = {hist:quantiles(unpack(q))}
+  for i,z in ipairs(Z1) do
+    assert(sim(Y[i],z))
+  end
+  local Y = {hist:quantiles7(unpack(q))}
+  for i,z in ipairs(Z7) do
+    assert(sim(Y[i],z))
+  end
+
+  local q  = {  0/4,    1/3,    2/3,    3/3 }
+  local Z  = { 1.05,   2.05,   3.05,   4.05 }
+  local Z7 = { 1.05,   2.05,   3.05,   4.05 }
+  local Y = {hist:quantiles(unpack(q))}
+  for i,z in ipairs(Z) do
+    assert(sim(Y[i],z))
+  end
+  local Y = {hist:quantiles7(unpack(q))}
+  for i,z in ipairs(Z7) do
+    assert(sim(Y[i],z))
+  end
+end
+
 function tests.equal(scratch)
   local h = Circllhist:new()
   local k = Circllhist:new()
