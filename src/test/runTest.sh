@@ -34,9 +34,9 @@ else
 fi
 
 export LUA_PATH="\
-/opt/circonus/share/lua/5.1/?.lua;\
 ?.lua;\
 ../lua/?.lua;\
+/opt/circonus/share/lua/5.1/?.lua;\
 $($LUA_BIN -e "print(package.path)")"
 
 export LUA_CPATH="\
