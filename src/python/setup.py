@@ -7,7 +7,7 @@ setup(
     name="circllhist",
     long_description=long_description,
     long_description_content_type='text/markdown',
-    version="0.3.2",
+    version="0.4.0",
     description="OpenHistogram log-linear histogram library",
     maintainer="Circonus Packaging",
     maintainer_email="packaging@circonus.com",
