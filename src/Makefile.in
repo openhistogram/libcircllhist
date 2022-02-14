@@ -111,10 +111,10 @@ circllhist_print:	circllhist_print.o circllhist.o
 	$(Q)$(CC) $(CFLAGS) -o $@ circllhist_print.o circllhist.o -lm
 
 test/histogram_test: test/histogram_test.c $(LIBCIRCLLHIST)
-	$(Q)$(CC) -I. $(CPPFLAGS) $(CFLAGS) -L. $(LDFLAGS) -I. -o $@ test/histogram_test.c -lcircllhist
+	$(Q)$(CC) -I. $(CPPFLAGS) $(CFLAGS) -L. $(LDFLAGS) -I. -o $@ test/histogram_test.c circllhist.o -lm
 
 test/histogram_perf: test/histogram_perf.c $(LIBCIRCLLHIST)
-	$(Q)$(CC) -I. $(CPPFLAGS) $(CFLAGS) -L. $(LDFLAGS) -I. -o $@ test/histogram_perf.c -lcircllhist -lm
+	$(Q)$(CC) -I. $(CPPFLAGS) $(CFLAGS) -L. $(LDFLAGS) -I. -o $@ test/histogram_perf.c circllhist.o -lm
 
 circllhist.ffi.h: circllhist.h
 	./prepareFFI.sh < $< > $@
