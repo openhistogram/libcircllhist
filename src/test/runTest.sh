@@ -59,7 +59,7 @@ $LUA_BIN $LUA_ARGS -l circllhist_test -e "circllhist_test.runTests()"
 
 
 echo "Running Python tests"
-pushd ../python
+pushd ..
 
 if [ -z "$PYTHON_BIN" ]
 then
@@ -82,8 +82,8 @@ else
     exit 1
 fi
 
-echo "Running: $PYTHON_BIN test.py"
-$PYTHON_BIN test.py
+echo "Running: $PYTHON_BIN python/test.py"
+$PYTHON_BIN python/test.py
 
 popd
 
