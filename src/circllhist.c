@@ -588,7 +588,11 @@ hist_clamp(histogram_t *hist, double lower, double upper) {
   if(!hist) return;
   ASSERT_GOOD_HIST(hist);
   for(int i=0; i<hist->used; i++) {
-    if(hist_bucket_isnan(hist->bvs[i].bucket)) continue;
+    if(hist_bucket_isnan(hist->bvs[i].bucket)) {
+      needs_cull = 1;
+      hist->bvs[i].count = 0;
+      continue;
+    }
     double bucket_lower = hist_bucket_to_double(hist->bvs[i].bucket);
     double bucket_upper;
     if(bucket_lower < 0) {
@@ -1636,4 +1640,43 @@ hist_approx_inverse_quantile(const histogram_t *hist, const double *in, int in_s
     out[i] = 1;
   }
   return 0;
+}
+
+histogram_t *
+hist_create_approximation_from_adhoc(histogram_approx_mode_t mode,
+                                     const histogram_adhoc_bin_t *bins,
+                                     size_t nbins, double sum) {
+  histogram_t *h = hist_alloc_nbins(nbins);
+  double last_spread = 0;
+  for(size_t i=0; i<nbins; i++) {
+    double a = bins[i].lower;
+    double b = bins[i].upper;
+    if(abs(a) > abs(b)) {
+      a = bins[i].upper;
+      b = bins[i].lower;
+    }
+    // chose a midpoint with minimal error
+    double m = 0;
+    switch(mode) {
+      case HIST_APPROX_HIGH:
+        m = bins[i].upper - fabs(bins[i].upper) / 1000; break;
+      case HIST_APPROX_LOW:
+        m = bins[i].lower + fabs(bins[i].lower) / 1000; break;
+      case HIST_APPROX_MID:
+        m = (a / (a + b)) * fabs(b-a) + bins[i].lower;
+        break;
+    }
+    // however if we're a (-inf,B) or an (A,+inf) bucket we need to me more clever
+    if(i>0 && bins[i].upper >= pow(10,128)) {
+      m = a + (last_spread > a ? a : last_spread);
+    }
+    if(i == 0 && nbins > 2 && bins[0].lower <= -pow(10,128)) {
+      double offset1 = abs(b), offset2 = abs(bins[1].upper - bins[1].lower);
+      m = b - (offset1 > offset2 ? offset2 : offset1);
+    }
+    fprintf(stderr, "(%g, %g] -> %g n=%zu\n", a, b, m, bins[i].count);
+    hist_insert(h, m, bins[i].count);
+    last_spread = b - a;
+  }
+  return h;
 }
