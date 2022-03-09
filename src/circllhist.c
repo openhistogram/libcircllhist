@@ -1659,14 +1659,22 @@ hist_create_approximation_from_adhoc(histogram_approx_mode_t mode,
     double m = 0;
     switch(mode) {
       case HIST_APPROX_HIGH:
-        m = bins[i].upper - fabs(bins[i].upper) / 1000; break;
+        m = bins[i].upper - fabs(bins[i].upper) / 1000;
+        break;
       case HIST_APPROX_LOW:
-        m = bins[i].lower + fabs(bins[i].lower) / 1000; break;
+        m = bins[i].lower + fabs(bins[i].lower) / 1000;
+        break;
       case HIST_APPROX_MID:
-        m = (a / (a + b)) * fabs(b-a) + bins[i].lower;
+        m = a + (b-a)/2;
+        break;
+      case HIST_APPROX_MIN_ERROR:
+        if(a == 0 || b == 0)
+          m = a + (b-a)/2;
+        else
+          m = (a / (a + b)) * fabs(b-a) + bins[i].lower;
         break;
     }
-    // however if we're a (-inf,B) or an (A,+inf) bucket we need to me more clever
+    // however if we're a (-inf,B) or an (A,+inf) bucket we need to be more clever
     if(i>0 && bins[i].upper >= pow(10,128)) {
       m = a + (last_spread > a ? a : last_spread);
     }
@@ -1674,7 +1682,6 @@ hist_create_approximation_from_adhoc(histogram_approx_mode_t mode,
       double offset1 = abs(b), offset2 = abs(bins[1].upper - bins[1].lower);
       m = b - (offset1 > offset2 ? offset2 : offset1);
     }
-    fprintf(stderr, "(%g, %g] -> %g n=%zu\n", a, b, m, bins[i].count);
     hist_insert(h, m, bins[i].count);
     last_spread = b - a;
   }

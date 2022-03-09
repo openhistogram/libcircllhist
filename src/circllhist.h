@@ -247,6 +247,7 @@ typedef struct {
 
 typedef enum {
   HIST_APPROX_MID = 0,
+  HIST_APPROX_MIN_ERROR,
   HIST_APPROX_HIGH,
   HIST_APPROX_LOW
 } histogram_approx_mode_t;
