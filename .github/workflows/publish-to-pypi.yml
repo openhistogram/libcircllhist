@@ -35,15 +35,16 @@ jobs:
         .
       working-directory: ./src/python
     - name: Publish distribution to Test PyPI
-      uses: pypa/gh-action-pypi-publish@v1.4.2
+      uses: pypa/gh-action-pypi-publish@release/v1
       with:
         password: ${{ secrets.TEST_PYPI_API_TOKEN }}
         repository_url: https://test.pypi.org/legacy/
         packages_dir: src/python/dist/
         skip_existing: true
+        verbose: true
     - name: Publish distribution to PyPI
       if: startsWith(github.ref, 'refs/tags/py-')
-      uses: pypa/gh-action-pypi-publish@v1.4.2
+      uses: pypa/gh-action-pypi-publish@release/v1
       with:
         password: ${{ secrets.PYPI_API_TOKEN }}
         packages_dir: src/python/dist/
