@@ -1637,3 +1637,94 @@ hist_approx_inverse_quantile(const histogram_t *hist, const double *in, int in_s
   }
   return 0;
 }
+
+histogram_t *
+hist_create_approximation_from_adhoc(histogram_approx_mode_t mode,
+                                     const histogram_adhoc_bin_t *bins,
+                                     size_t nbins, double sum) {
+  /* the sum is currently unused, but if non-zero could be used to inform
+   * bin selection.
+   *
+   * Many of the adhoc binned histograms coming in are "temporaly cumulative"
+   * such that a future histogram will have more acumulated counts in "the same"
+   * bins.  So, if we were to use sum to inform that we could potentially switch
+   * which bins we map to and thus break the illusion of an output histogram being
+   * temporaily cumulative as well.
+   *
+   * If we do implement sum-hints, we'd need to expose new modes that eplicitly do
+   * not guarantee consistent (in)->(out) consistency.
+   */
+  (void)sum;
+  histogram_t *h = hist_alloc_nbins(nbins);
+  double last_spread = 0;
+  for(size_t i=0; i<nbins; i++) {
+    double a = bins[i].lower;
+    double b = bins[i].upper;
+    if(a == b && b == 0) {
+      hist_insert(h, 0, bins[i].count);
+      last_spread = 0;
+      continue;
+    }
+    if(fabs(a) > fabs(b) || b < 0) {
+      a = bins[i].upper;
+      b = bins[i].lower;
+    }
+    // chose a midpoint with minimal error
+    double m = 0;
+    switch(mode) {
+      case HIST_APPROX_HIGH:
+        {
+          if(a > 1e+127) m = 1e+128;
+          else if(a < -1e+127) m = -1e+128;
+          else {
+            if(b > 1e+127) m = 1e+127;
+            else if(b < -1e+127) m = -1e+127;
+            else {
+              double w = hist_bucket_to_double_bin_width(double_to_hist_bucket(b));
+              if(w == 0) w = 1e-127;
+              m = (b > 0) ? (b - w/100) : (b + w/100);
+            }
+          }
+        }
+        break;
+      case HIST_APPROX_LOW:
+        {
+          if(a > 1e+127) m = 1e+128;
+          else if(a < -1e+127) m = -1e+128;
+          else {
+            if(b > 1e+127) b = 1e+127;
+            if(b < -1e+127) b = -1e+127;
+            double w = hist_bucket_to_double_bin_width(double_to_hist_bucket(a));
+            if(w == 0) w = 1e-127;
+            m = (a > 0) ? (a + w/100) : (a - w/100);
+          }
+        }
+        break;
+      case HIST_APPROX_MID:
+        m = a + (b-a)/2;
+        break;
+      case HIST_APPROX_HARMONIC_MEAN:
+        if(a == 0 || b == 0)
+          m = a + (b-a)/2;
+        else {
+          if(a+b == 0) m = 0;
+          else {
+            long double scale = ((long double)a / ((long double)a + (long double)b));
+            m = (double)(scale * (long double)b) - (scale * (long double)a) + (long double)a;
+          }
+        }
+        break;
+    }
+    // however if we're a (-inf,B) or an (A,+inf) bucket we need to be more clever
+    if(i>0 && bins[i].upper >= pow(10,128)) {
+      m = a + (last_spread > a ? a : last_spread);
+    }
+    if(i == 0 && nbins > 2 && bins[0].lower <= -pow(10,128)) {
+      double offset1 = abs(b), offset2 = abs(bins[1].upper - bins[1].lower);
+      m = a - (offset1 > offset2 ? offset2 : offset1);
+    }
+    hist_insert(h, m, bins[i].count);
+    last_spread = b - a;
+  }
+  return h;
+}

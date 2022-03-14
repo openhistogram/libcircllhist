@@ -239,6 +239,26 @@ API_EXPORT(int) hist_approx_quantile7(const histogram_t *, const double *q_in, i
 //! \param *iq_out pre-allocated array where results shall be written to
 API_EXPORT(int) hist_approx_inverse_quantile(const histogram_t *, const double *iq_in, int niq, double *iq_out);
 
+typedef struct {
+  uint64_t count;
+  double lower;
+  double upper;
+} histogram_adhoc_bin_t;
+
+typedef enum {
+  HIST_APPROX_MID = 0,
+  HIST_APPROX_HARMONIC_MEAN,
+  HIST_APPROX_HIGH,
+  HIST_APPROX_LOW
+} histogram_approx_mode_t;
+
+//! Approximate a histogram based on a set of counts in adhoc bins
+//! \param node how to choose bins.
+//! \param *bins the adhoc bins
+//! \param nbins the number of adhoc bins
+//! \param sum the sum of all the sample if available, may be used as a hint
+API_EXPORT(histogram_t *) hist_create_approximation_from_adhoc(histogram_approx_mode_t mode, const histogram_adhoc_bin_t *bins, size_t nbins, double sum);
+
 #ifdef __cplusplus
 } /* FFI_SKIP */
 #endif

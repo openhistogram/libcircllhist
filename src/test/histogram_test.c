@@ -727,6 +727,52 @@ int main() {
   T(is(0 == hist_approx_count_below(NULL, 1)));
   T(is(0 == hist_approx_count_above(NULL, 1)));
 
-  printf("%d..%d\n", 1, tcount-1);
+#define ADHOC_TEST(l, u, mode, pred, val) \
+  do { \
+    histogram_adhoc_bin_t bins[] = { { .count = 1, .lower = l, .upper = u } }; \
+    histogram_t *h = hist_create_approximation_from_adhoc(mode, bins, 1, 0); \
+    isf(hist_bucket_count(h) == 1, "%d bucket", 1); \
+    double v = FP_NAN; \
+    uint64_t c = 0; \
+    hist_bucket_idx(h, 0, &v, &c); \
+    isf(pred, "got %g, expected %s", v, #val); \
+    hist_free(h); \
+  } while(0)
+
+  T(ADHOC_TEST( -1e+200, -1e+128, HIST_APPROX_MID, isnan(v), nan));
+  T(ADHOC_TEST( -1e+128, -1e-128, HIST_APPROX_MID, double_equals(v, -5e+127), -5e+127));
+  T(ADHOC_TEST( -1e+128, +1e+128, HIST_APPROX_MID, double_equals(v, 0), 0));
+  T(ADHOC_TEST( +1e-128, +1e+128, HIST_APPROX_MID, double_equals(v, +5e+127), +5e+127));
+  T(ADHOC_TEST( +1e+128, +1e+200, HIST_APPROX_MID, isnan(v), nan));
+
+  T(ADHOC_TEST( -1e+200, -1e+128, HIST_APPROX_HARMONIC_MEAN, isnan(v), nan));
+  T(ADHOC_TEST( -1e+128, -1e-128, HIST_APPROX_HARMONIC_MEAN, double_equals(v, -2e-128), -2e-128));
+  T(ADHOC_TEST( -1e+128, +1e+128, HIST_APPROX_HARMONIC_MEAN, double_equals(v, 0), 0));
+  T(ADHOC_TEST( +1e-128, +1e+128, HIST_APPROX_HARMONIC_MEAN, double_equals(v, +2e-128), +2e-128));
+  T(ADHOC_TEST( +1e+128, +1e+200, HIST_APPROX_HARMONIC_MEAN, isnan(v), nan));
+
+  T(ADHOC_TEST( -1e+200, -1e+128, HIST_APPROX_LOW, isnan(v), nan));
+  T(ADHOC_TEST( -1e+128, -1e-128, HIST_APPROX_LOW, double_equals(v, -1e-128), -1e-128));
+  T(ADHOC_TEST( -1e+128, +1e+128, HIST_APPROX_LOW, isnan(v), nan));
+  T(ADHOC_TEST( +1e-128, +1e+128, HIST_APPROX_LOW, double_equals(v, +1e-128), +1e-128));
+  T(ADHOC_TEST( +1e+128, +1e+200, HIST_APPROX_LOW, isnan(v), nan));
+
+  T(ADHOC_TEST( -1e+200, -1e+128, HIST_APPROX_HIGH, isnan(v), nan));
+  T(ADHOC_TEST( -1e+128, -1e-128, HIST_APPROX_HIGH, double_equals(v, -1e+127), -1e+127));
+  T(ADHOC_TEST( -1e+128, +1e+128, HIST_APPROX_HIGH, isnan(v), nan));
+  T(ADHOC_TEST( +1e-128, +1e+128, HIST_APPROX_HIGH, double_equals(v, +1e+127), +1e+127));
+  T(ADHOC_TEST( +1e+128, +1e+200, HIST_APPROX_HIGH, isnan(v), nan));
+
+  T(ADHOC_TEST( 0, 25, HIST_APPROX_MID, double_equals(v, 12), 12));
+  T(ADHOC_TEST( 0, 25, HIST_APPROX_HARMONIC_MEAN, double_equals(v, 12), 12));
+  T(ADHOC_TEST( 0, 25, HIST_APPROX_LOW, double_equals(v, 0), 0));
+  T(ADHOC_TEST( 0, 25, HIST_APPROX_HIGH, double_equals(v, 24), 24));
+
+  T(ADHOC_TEST( 25, 100, HIST_APPROX_MID, double_equals(v, 62), 62));
+  T(ADHOC_TEST( 25, 100, HIST_APPROX_HARMONIC_MEAN, double_equals(v, 40), 40));
+  T(ADHOC_TEST( 25, 100, HIST_APPROX_LOW, double_equals(v, 25), 25));
+  T(ADHOC_TEST( 25, 100, HIST_APPROX_HIGH, double_equals(v, 99), 99));
+
+  printf("%d..%d", 1, tcount-1);
   return failed ? -1 : 0;
 }
