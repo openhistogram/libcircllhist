@@ -588,11 +588,7 @@ hist_clamp(histogram_t *hist, double lower, double upper) {
   if(!hist) return;
   ASSERT_GOOD_HIST(hist);
   for(int i=0; i<hist->used; i++) {
-    if(hist_bucket_isnan(hist->bvs[i].bucket)) {
-      needs_cull = 1;
-      hist->bvs[i].count = 0;
-      continue;
-    }
+    if(hist_bucket_isnan(hist->bvs[i].bucket)) continue;
     double bucket_lower = hist_bucket_to_double(hist->bvs[i].bucket);
     double bucket_upper;
     if(bucket_lower < 0) {
