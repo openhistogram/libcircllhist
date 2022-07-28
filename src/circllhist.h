@@ -164,6 +164,8 @@ API_EXPORT(int) hist_subtract(histogram_t *tgt, const histogram_t * const *src, 
 API_EXPORT(int) hist_subtract_as_int64(histogram_t *tgt, const histogram_t *src);
 //! Add bins in src from tgt treating src counts as signed, return -1 on overflow error
 API_EXPORT(int) hist_add_as_int64(histogram_t *tgt, const histogram_t *src);
+//! Downsample a histogram to a certain factor.
+API_EXPORT(void) hist_downsample(histogram_t *tgt, double factor);
 //! Clear data fast. Keeps buckets allocated.
 API_EXPORT(void) hist_clear(histogram_t *hist);
 //! Insert a value into a histogram value = val * 10^(scale)

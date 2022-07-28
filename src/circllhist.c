@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#define _XOPEN_SOURCE
 #include <assert.h>
 
 #include <stdio.h>
@@ -30,6 +31,78 @@
 #endif
 
 #include "circllhist.h"
+#include "cdflib.h"
+
+/* A search for inverse binmomial CDF values...
+ * Given a set of N retain each element with probability p resulting in M...
+ * tgt [0,1] is the placement on the CDF...
+ * It is reasonable to call this with drand48()
+ */
+
+static inline double cumbin_r(double s, double n, double pr, double ompr) {
+  double cum, ccum;
+  cumbin(&s, &n, &pr, &ompr, &cum, &ccum);
+  return cum;
+}
+
+static unsigned long binomial_reduce_random(unsigned long N, double pr, double tgt) {
+  if(pr == 1) return N;
+  if(pr == 0) return 0;
+
+  unsigned long left = 0, right = N;
+  unsigned long i = (double)N * pr; // we guess where we're likely to end up.
+  unsigned long bias = (double)N * 0.005; // then bias only the first bisection to reduce steps.
+  if(bias < 2) bias = 2;
+
+  // this are for calculating the CDF value
+  double ompr = 1.0 - pr;
+  double n = N;
+  double cum = 0;
+  double s = i;
+
+  while(right > left) {
+    s = i;
+    cum = cumbin_r(s, n, pr, ompr);
+    if(i == right) {             // if i==left, we don't have the correct `cum` to compare to,
+                                 // we'll hit this case next iteration
+      if(right - left == 1) {    // since we're not looking for an exact match, but just under
+        if(tgt <= cum) return i; // this
+        else return i-1;         // or that
+      }
+    }
+    if(tgt <= cum) {
+      if(i == 0) return 0;
+      right = i;
+    }
+    else {
+      if(i == N) return N;
+      left = i;
+    }
+
+    // We don't necessarily bisect.  B/c binomial distributions tend to be so tight,
+    // we can artificially limit our first bisection by about 50x.  We'll rarely be wrong
+    // and we return to straight bisection on subsequent iterations, so it will only ever
+    // cost an extra step when we're unlucky.
+    unsigned long skip = (right - left) / bias;
+    if(bias != 2 && skip < 1) skip = (right - left) / 2;
+    if(skip < 1) skip = 1;
+
+    // because we may not simply bisect we have a conditional
+    if(tgt <= cum) {
+      i = right - skip;
+    }
+    else {
+      i = left + skip;
+    }
+    // simple bisection on subsequent iterations.
+    bias = 2;
+  }
+  return i;
+}
+
+static unsigned long binomial_reduce(unsigned long N, double pr) {
+  return binomial_reduce_random(N, pr, drand48());
+}
 
 const hist_allocator_t default_allocator = {
   .malloc = malloc,
@@ -588,7 +661,11 @@ hist_clamp(histogram_t *hist, double lower, double upper) {
   if(!hist) return;
   ASSERT_GOOD_HIST(hist);
   for(int i=0; i<hist->used; i++) {
-    if(hist_bucket_isnan(hist->bvs[i].bucket)) continue;
+    if(hist_bucket_isnan(hist->bvs[i].bucket)) {
+      needs_cull = 1;
+      hist->bvs[i].count = 0;
+      continue;
+    }
     double bucket_lower = hist_bucket_to_double(hist->bvs[i].bucket);
     double bucket_upper;
     if(bucket_lower < 0) {
@@ -1088,6 +1165,21 @@ hist_remove_zeroes(histogram_t *hist) {
   if(hist->fast) {
     hist_fast_rebuild(hist, 0, 1);
   }
+}
+
+void
+hist_downsample(histogram_t *hist, double factor) {
+  int zeroes = 0;
+  if(factor < 0) factor = 0;
+  if(factor > 1) factor = 1;
+  if(!hist) return;
+  for(int i=0;i<hist->used;i++) {
+    if(hist->bvs[i].count > 0) {
+      hist->bvs[i].count = binomial_reduce(hist->bvs[i].count, factor);
+    }
+    if(hist->bvs[i].count == 0) zeroes++;
+  }
+  if(zeroes) hist_remove_zeroes(hist);
 }
 
 uint64_t

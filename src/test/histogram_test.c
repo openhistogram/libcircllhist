@@ -8,7 +8,7 @@
 #include "circllhist.h"
 #include <string.h>
 #include <inttypes.h>
-#include <time.h>
+#include <sys/time.h>
 
 typedef histogram_t *(*halloc_func)();
 halloc_func halloc = NULL;
@@ -292,6 +292,26 @@ void q7_test(double *vals, int nvals, double *in, int nin, double *expected) {
   free(out);
 }
 
+void downsample() {
+  histogram_t *h = hist_alloc();
+  unsigned total = 0;
+  for(int i=10; i<100; i++) {
+    for(int j=-9; j<10; j++) {
+      unsigned cnt = lrand48() % 4;
+      hist_insert_intscale(h, i, j, cnt);
+      total += cnt;
+    }
+  }
+  if(hist_sample_count(h) != total) notokf("downsample starting size wrong - %lu != %lu", (unsigned long)hist_sample_count(h), (unsigned long)total);
+  else ok();
+  hist_downsample(h, 0.2);
+  int actual = hist_sample_count(h);
+  int expected = total * 0.2;
+  double err = (double)abs(actual - expected) / (double)total;
+  const double err_allowed = 0.05;
+  isf(err < err_allowed, "downsampled reasonably - %3.2f%% < %3.2f%%", err * 100, err_allowed * 100);
+  hist_free(h);
+}
 
 void simple_clear() {
   histogram_t *h = hist_alloc();
@@ -618,7 +638,9 @@ diff_test() {
 }
 
 int main() {
-  srand48(time(NULL));
+  struct timeval now;
+  gettimeofday(&now, NULL);
+  srand48(now.tv_sec ^ now.tv_usec);
   bucket_tests();
   T(test1(43.3, 43, 1));
   T(test1(99.9, 99, 1));
@@ -714,6 +736,8 @@ int main() {
   T(accum_sub_test());
   compress_test();
 
+  T(downsample());
+
   T(simple_clear());
 
   T(issue_n());
@@ -773,6 +797,6 @@ int main() {
   T(ADHOC_TEST( 25, 100, HIST_APPROX_LOW, double_equals(v, 25), 25));
   T(ADHOC_TEST( 25, 100, HIST_APPROX_HIGH, double_equals(v, 99), 99));
 
-  printf("%d..%d", 1, tcount-1);
+  printf("%d..%d\n", 1, tcount-1);
   return failed ? -1 : 0;
 }
