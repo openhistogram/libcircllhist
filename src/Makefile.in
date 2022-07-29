@@ -106,14 +106,14 @@ $(LIBCIRCLLHIST_V):	$(LIBCIRCLLHIST_OBJS)
 		 $(CTFMERGE) -l @LIBCIRCLLHIST_VERSION@ -o $@ $(LIBCIRCLLHIST_OBJS) ; \
 	fi
 
-circllhist_print:	circllhist_print.o circllhist.o
+circllhist_print:	circllhist_print.o $(LIBCIRCLLHIST_OBJS)
 	@echo "- linking $@"
 	$(Q)$(CC) $(CFLAGS) -o $@ circllhist_print.o $(LIBCIRCLLHIST_OBJS) -lm
 
-test/histogram_test: test/histogram_test.c circllhist.o
+test/histogram_test: test/histogram_test.c $(LIBCIRCLLHIST_OBJS)
 	$(Q)$(CC) -I. $(CPPFLAGS) $(CFLAGS) -L. $(LDFLAGS) -I. -o $@ test/histogram_test.c $(LIBCIRCLLHIST_OBJS) -lm
 
-test/histogram_perf: test/histogram_perf.c circllhist.o
+test/histogram_perf: test/histogram_perf.c $(LIBCIRCLLHIST_OBJS)
 	$(Q)$(CC) -I. $(CPPFLAGS) $(CFLAGS) -L. $(LDFLAGS) -I. -o $@ test/histogram_perf.c $(LIBCIRCLLHIST_OBJS) -lm
 
 circllhist.ffi.h: circllhist.h
