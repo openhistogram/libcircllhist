@@ -81,7 +81,7 @@ all:	reversion $(TARGETS)
 
 HEADERS=circllhist.h
 
-LIBCIRCLLHIST_OBJS=circllhist.lo
+LIBCIRCLLHIST_OBJS=circllhist.lo dcdflib.lo ipmpar.lo
 
 .PHONY:	reversion
 
@@ -108,13 +108,13 @@ $(LIBCIRCLLHIST_V):	$(LIBCIRCLLHIST_OBJS)
 
 circllhist_print:	circllhist_print.o circllhist.o
 	@echo "- linking $@"
-	$(Q)$(CC) $(CFLAGS) -o $@ circllhist_print.o circllhist.o -lm
+	$(Q)$(CC) $(CFLAGS) -o $@ circllhist_print.o $(LIBCIRCLLHIST_OBJS) -lm
 
 test/histogram_test: test/histogram_test.c circllhist.o
-	$(Q)$(CC) -I. $(CPPFLAGS) $(CFLAGS) -L. $(LDFLAGS) -I. -o $@ test/histogram_test.c circllhist.o -lm
+	$(Q)$(CC) -I. $(CPPFLAGS) $(CFLAGS) -L. $(LDFLAGS) -I. -o $@ test/histogram_test.c $(LIBCIRCLLHIST_OBJS) -lm
 
 test/histogram_perf: test/histogram_perf.c circllhist.o
-	$(Q)$(CC) -I. $(CPPFLAGS) $(CFLAGS) -L. $(LDFLAGS) -I. -o $@ test/histogram_perf.c circllhist.o -lm
+	$(Q)$(CC) -I. $(CPPFLAGS) $(CFLAGS) -L. $(LDFLAGS) -I. -o $@ test/histogram_perf.c $(LIBCIRCLLHIST_OBJS) -lm
 
 circllhist.ffi.h: circllhist.h
 	./prepareFFI.sh < $< > $@
