@@ -211,11 +211,11 @@ API_EXPORT(double) hist_approx_moment(const histogram_t *hist, double k);
 //! \param lower
 //! \param upper
 API_EXPORT(void) hist_clamp(histogram_t *hist, double lower, double upper);
-//! Returns the number of values in buckets that are entirely lower than or equal to threshold
+//! Returns the number of values in buckets that are entirely lower than or equal to threshold.  This is complementary to count_below such that above(x) + below(x) == count()
 //! \param hist
 //! \param threshold
 API_EXPORT(uint64_t) hist_approx_count_below(const histogram_t *hist, double threshold);
-//! Returns the number of values in buckets that are entirely larger than or equal to threshold
+//! Returns the number of values in buckets greater than the bucket containing the threshold.   This is complementary to count_above such that above(x) + below(x) == count()
 //! \param hist
 //! \param threshold
 API_EXPORT(uint64_t) hist_approx_count_above(const histogram_t *hist, double threshold);

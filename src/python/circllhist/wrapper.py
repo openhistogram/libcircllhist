@@ -115,11 +115,11 @@ class Circllhist(object):
         return ffi.C.hist_approx_moment(self._h, k)
 
     def count_below(self, threshold):
-        "Returns the number of values in buckets that are entirely lower than or equal to threshold"
+        "Returns the number of values in buckets that are entirely lower than or equal to threshold.  This is complementary to count_below such that above(x) + below(x) == count()"
         return ffi.C.hist_approx_count_below(self._h, threshold)
 
     def count_above(self, threshold):
-        "Returns the number of values in buckets that are entirely larger than or equal to threshold"
+        "Returns the number of values in buckets greater than the bucket containing the threshold.   This is complementary to count_above such that above(x) + below(x) == count()"
         return ffi.C.hist_approx_count_above(self._h, threshold)
 
     def count_nearby(self, value):
