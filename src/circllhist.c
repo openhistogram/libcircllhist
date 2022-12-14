@@ -230,7 +230,7 @@ typedef enum {
 } bvdatum_t;
 
 static inline int
-hist_bucket_isnan(hist_bucket_t hb) {
+hist_bucket_isnan(const hist_bucket_t hb) {
   int aval = abs(hb.val);
   if (99 <  aval) return 1; // in [100... ]: nan
   if ( 9 <  aval) return 0; // in [10 - 99]: valid range
@@ -242,7 +242,7 @@ hist_bucket_isnan(hist_bucket_t hb) {
 
 /* It's either not NaN, or exactly matches the one, true NaN */
 static inline int
-hist_bucket_is_valid(hist_bucket_t hb) {
+hist_bucket_is_valid(const hist_bucket_t hb) {
   return !hist_bucket_isnan(hb) || (hb.val == hbnan.val && hb.exp == hbnan.exp);
 }
 
@@ -683,7 +683,7 @@ hist_clamp(histogram_t *hist, double lower, double upper) {
 }
 
 uint64_t __attribute__((alias("hist_approx_count_below_inclusive"))) hist_approx_count_below(const histogram_t *hist, double threshold);
-uint64_t __attribute__((alias("hist_approx_count_above_exclusive"))) hist_approx_count_above(const histogram_t *hist, double threshold);
+uint64_t __attribute__((alias("hist_approx_count_above_inclusive"))) hist_approx_count_above(const histogram_t *hist, double threshold);
 
 uint64_t
 hist_approx_count_below_inclusive(const histogram_t *hist, double threshold) {
@@ -691,18 +691,13 @@ hist_approx_count_below_inclusive(const histogram_t *hist, double threshold) {
   uint64_t running_count = 0;
   if(!hist) return 0;
   ASSERT_GOOD_HIST(hist);
+  hist_bucket_t tgt = double_to_hist_bucket(threshold);
   for(i=0; i<hist->used; i++) {
     if(hist_bucket_isnan(hist->bvs[i].bucket)) continue;
-    double bucket_bound = hist_bucket_to_double(hist->bvs[i].bucket);
-    double bucket_lower;
-    if(bucket_bound < 0.0)
-      bucket_lower = bucket_bound - hist_bucket_to_double_bin_width(hist->bvs[i].bucket);
-    else
-      bucket_lower = bucket_bound;
-    if(bucket_lower <= threshold)
+    if(hist_bucket_cmp(tgt, hist->bvs[i].bucket) <= 0) {
       running_count += hist->bvs[i].count;
-    else
-      break;
+    }
+    else break;
   }
   return running_count;
 }
@@ -713,18 +708,13 @@ hist_approx_count_below_exclusive(const histogram_t *hist, double threshold) {
   uint64_t running_count = 0;
   if(!hist) return 0;
   ASSERT_GOOD_HIST(hist);
+  hist_bucket_t tgt = double_to_hist_bucket(threshold);
   for(i=0; i<hist->used; i++) {
     if(hist_bucket_isnan(hist->bvs[i].bucket)) continue;
-    double bucket_bound = hist_bucket_to_double(hist->bvs[i].bucket);
-    double bucket_upper;
-    if(bucket_bound < 0.0)
-      bucket_upper = bucket_bound;
-    else
-      bucket_upper = bucket_bound + hist_bucket_to_double_bin_width(hist->bvs[i].bucket);
-    if(bucket_upper < threshold)
+    if(hist_bucket_cmp(tgt, hist->bvs[i].bucket) < 0) {
       running_count += hist->bvs[i].count;
-    else
-      break;
+    }
+    else break;
   }
   return running_count;
 }
@@ -734,19 +724,14 @@ hist_approx_count_above_exclusive(const histogram_t *hist, double threshold) {
   int i;
   if(!hist) return 0;
   ASSERT_GOOD_HIST(hist);
+  hist_bucket_t tgt = double_to_hist_bucket(threshold);
   uint64_t running_count = hist_sample_count(hist);
   for(i=0; i<hist->used; i++) {
     if(hist_bucket_isnan(hist->bvs[i].bucket)) continue;
-    double bucket_bound = hist_bucket_to_double(hist->bvs[i].bucket);
-    double bucket_lower;
-    if(bucket_bound < 0.0)
-      bucket_lower = bucket_bound - hist_bucket_to_double_bin_width(hist->bvs[i].bucket);
-    else
-      bucket_lower = bucket_bound;
-    if(bucket_lower <= threshold)
+    if(hist_bucket_cmp(tgt, hist->bvs[i].bucket) <= 0) {
       running_count -= hist->bvs[i].count;
-    else
-      break;
+    }
+    else break;
   }
   return running_count;
 }
@@ -756,19 +741,14 @@ hist_approx_count_above_inclusive(const histogram_t *hist, double threshold) {
   int i;
   if(!hist) return 0;
   ASSERT_GOOD_HIST(hist);
+  hist_bucket_t tgt = double_to_hist_bucket(threshold);
   uint64_t running_count = hist_sample_count(hist);
   for(i=0; i<hist->used; i++) {
     if(hist_bucket_isnan(hist->bvs[i].bucket)) continue;
-    double bucket_bound = hist_bucket_to_double(hist->bvs[i].bucket);
-    double bucket_upper;
-    if(bucket_bound < 0.0)
-      bucket_upper = bucket_bound;
-    else
-      bucket_upper = bucket_bound + hist_bucket_to_double_bin_width(hist->bvs[i].bucket);
-    if(bucket_upper <= threshold)
+    if(hist_bucket_cmp(tgt, hist->bvs[i].bucket) < 0) {
       running_count -= hist->bvs[i].count;
-    else
-      break;
+    }
+    else break;
   }
   return running_count;
 }
