@@ -721,7 +721,7 @@ hist_approx_count_below_exclusive(const histogram_t *hist, double threshold) {
       bucket_upper = bucket_bound;
     else
       bucket_upper = bucket_bound + hist_bucket_to_double_bin_width(hist->bvs[i].bucket);
-    if(bucket_upper <= threshold)
+    if(bucket_upper < threshold)
       running_count += hist->bvs[i].count;
     else
       break;
