@@ -682,8 +682,12 @@ hist_clamp(histogram_t *hist, double lower, double upper) {
   if(needs_cull) hist_remove_zeroes(hist);
 }
 
-uint64_t __attribute__((alias("hist_approx_count_below_inclusive"))) hist_approx_count_below(const histogram_t *hist, double threshold);
-uint64_t __attribute__((alias("hist_approx_count_above_inclusive"))) hist_approx_count_above(const histogram_t *hist, double threshold);
+uint64_t hist_approx_count_below(const histogram_t *hist, double threshold) {
+  return hist_approx_count_below_inclusive(hist, threshold);
+}
+uint64_t hist_approx_count_above(const histogram_t *hist, double threshold) {
+  return hist_approx_count_above_inclusive(hist, threshold);
+}
 
 uint64_t
 hist_approx_count_below_inclusive(const histogram_t *hist, double threshold) {
