@@ -1484,6 +1484,20 @@ int
 hist_accumulate(histogram_t *tgt, const histogram_t* const *src, int cnt) {
   int tgtneeds;
   ASSERT_GOOD_HIST(tgt);
+  if(cnt == 0)
+    return tgt->used;
+  // With one non-aliased source, there is no multi-way merge to perform.
+  // hist_insert_raw() coalesces buckets while reusing target storage, so avoid
+  // the replacement allocation required by the general merge.
+  if(cnt == 1 && src[0] != NULL && src[0] != tgt) {
+    const histogram_t *source = src[0];
+    for(int i = 0; i < source->used; ++i)
+      if(source->bvs[i].count != 0)
+        hist_insert_raw(tgt, source->bvs[i].bucket, source->bvs[i].count);
+    return tgt->used;
+  }
+
+  // regular multi-way merge
   void *oldtgtbuff = tgt->bvs;
   histogram_t tgt_copy;
   histogram_t *inclusive_src_static[1025];

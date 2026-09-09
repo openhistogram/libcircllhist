@@ -382,6 +382,39 @@ void accum_sub_test() {
   else ok();
 }
 
+void accum_single_test() {
+  histogram_t *source = halloc();
+  histogram_t *target = halloc();
+  histogram_t *expected = halloc();
+  const histogram_t *sources[] = { source };
+
+  hist_insert(source, 1, 2);
+  hist_insert(source, 10, 3);
+  hist_insert(target, 5, 4);
+  hist_insert(expected, 5, 4);
+  hist_insert(expected, 1, 2);
+  hist_insert(expected, 10, 3);
+
+  isf(hist_accumulate(target, sources, 1) == hist_bucket_count(expected),
+      "%s", "single-source accumulation returns the bucket count");
+  isf(hists_equal(target, expected), "%s", "single-source accumulation preserves values");
+
+  isf(hist_accumulate(target, NULL, 0) == hist_bucket_count(expected),
+      "%s", "zero-source accumulation returns the bucket count");
+  isf(hists_equal(target, expected), "%s", "zero-source accumulation changes nothing");
+
+  histogram_t *empty = halloc();
+  const histogram_t *empty_sources[] = { empty };
+  isf(hist_accumulate(target, empty_sources, 1) == hist_bucket_count(expected),
+      "%s", "empty single-source accumulation returns the bucket count");
+  isf(hists_equal(target, expected), "%s", "empty single-source accumulation changes nothing");
+
+  hist_free(source);
+  hist_free(target);
+  hist_free(expected);
+  hist_free(empty);
+}
+
 void serialize_test() {
   int i,j,lfailed=0;
   histogram_t *in, *out;
@@ -764,6 +797,7 @@ int main() {
   T(sample_count_roll());
 
   T(accum_sub_test());
+  T(accum_single_test());
   compress_test();
 
   T(downsample());
