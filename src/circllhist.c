@@ -1535,6 +1535,12 @@ hist_clear(histogram_t *hist) {
   }
 }
 
+void
+hist_clear_many(histogram_t * const *histograms, int count) {
+  for (int i = 0; i < count; ++i)
+    hist_clear(histograms[i]);
+}
+
 histogram_t *
 hist_alloc(void) {
   return hist_alloc_nbins(0);

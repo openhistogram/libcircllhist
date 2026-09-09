@@ -328,6 +328,36 @@ void simple_clear() {
   hist_free(h);
 }
 
+void clear_many_test() {
+  histogram_t *histograms[5] = { halloc(), halloc(), halloc(), halloc(), halloc() };
+  for(int i = 0; i < 5; ++i)
+    hist_insert(histograms[i], i + 1, i + 2);
+
+  /* clear with count = 0 does nothing */
+  hist_clear_many(histograms, 0);
+  for(int i = 0; i < 5; ++i)
+    isf(hist_bucket_count(histograms[i]) == 1 && hist_sample_count(histograms[i]) == i + 2,
+        "histogram %d should retain values with zero count", i);
+
+  /* clear with count = 3 clears only three */
+  hist_clear_many(histograms, 3);
+  for(int i = 0; i < 3; ++i)
+    isf(hist_bucket_count(histograms[i]) == 0 && hist_sample_count(histograms[i]) == 0,
+        "histogram %d should be empty", i);
+  for(int i = 3; i < 5; ++i)
+    isf(hist_bucket_count(histograms[i]) == 1 && hist_sample_count(histograms[i]) == i + 2,
+        "histogram %d should retain its values", i);
+
+  /* clear again with count = 5, all five cleared */
+  hist_clear_many(histograms, 5);
+  for(int i = 0; i < 5; ++i)
+    isf(hist_bucket_count(histograms[i]) == 0 && hist_sample_count(histograms[i]) == 0,
+        "histogram %d should be empty", i);
+
+  for(int i = 0; i < 5; ++i)
+    hist_free(histograms[i]);
+}
+
 void accum_sub_test() {
   int i, j, samples = 0;
   histogram_t *tgt;
@@ -739,6 +769,7 @@ int main() {
   T(downsample());
 
   T(simple_clear());
+  T(clear_many_test());
 
   T(issue_n());
 

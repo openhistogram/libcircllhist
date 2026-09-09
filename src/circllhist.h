@@ -168,6 +168,8 @@ API_EXPORT(int) hist_add_as_int64(histogram_t *tgt, const histogram_t *src);
 API_EXPORT(void) hist_downsample(histogram_t *tgt, double factor);
 //! Clear data fast. Keeps buckets allocated.
 API_EXPORT(void) hist_clear(histogram_t *hist);
+//! Clear data from each of count histograms. Keeps buckets allocated.
+API_EXPORT(void) hist_clear_many(histogram_t * const *histograms, int count);
 //! Insert a value into a histogram value = val * 10^(scale)
 API_EXPORT(uint64_t) hist_insert_intscale(histogram_t *hist, int64_t val, int scale, uint64_t count);
 
