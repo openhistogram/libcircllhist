@@ -655,6 +655,78 @@ hist_approx_moment(const histogram_t *hist, double k) {
   return sk / pow(total_count, k);
 }
 
+hist_approx_summary_t
+hist_approx_summary(const histogram_t *hist, const double *bounds, int bound_count,
+                    uint64_t *cumulative_counts) {
+  hist_approx_summary_t result = {
+    .status = 0,
+    .sample_count = 0,
+    .sample_sum = 0.0,
+    .sample_sum_squares = 0.0
+  };
+  uint64_t running_count = 0;
+  int bound_idx = 0;
+  hist_bucket_t bound_bucket = { 0, 0 };
+  int bound_bucket_ready = 0;
+
+  if (bound_count < 0 || (bound_count > 0 && (!bounds || !cumulative_counts))) {
+    result.status = -1;
+    return result;
+  }
+  for (int i = 0; i < bound_count; ++i) {
+    if (isnan(bounds[i]) || (i > 0 && bounds[i - 1] > bounds[i])) {
+      result.status = -2;
+      return result;
+    }
+    cumulative_counts[i] = 0;
+  }
+  if (!hist) return result;
+
+  ASSERT_GOOD_HIST(hist);
+  for (int i = 0; i < hist->used; ++i) {
+    hist_bucket_t bucket = hist->bvs[i].bucket;
+    uint64_t bucket_count = hist->bvs[i].count;
+
+    // Preserve hist_sample_count() semantics: NaN samples count toward the
+    // total, but they do not contribute to the sum or cumulative counts.
+    uint64_t previous_count = result.sample_count;
+    result.sample_count += bucket_count;
+    if (result.sample_count < previous_count) result.sample_count = UINT64_MAX;
+    if (hist_bucket_isnan(bucket)) continue;
+
+    while (bound_idx < bound_count) {
+      if (bounds[bound_idx] == -INFINITY) {
+        cumulative_counts[bound_idx++] = running_count;
+        continue;
+      }
+      if (bounds[bound_idx] == INFINITY) break;
+
+      if (!bound_bucket_ready) {
+        bound_bucket = double_to_hist_bucket(bounds[bound_idx]);
+        bound_bucket_ready = 1;
+      }
+      // hist_bucket_cmp() returns positive when its first bucket is lower.
+      if (hist_bucket_cmp(bound_bucket, bucket) > 0) {
+        cumulative_counts[bound_idx++] = running_count;
+        bound_bucket_ready = 0;
+        continue;
+      }
+      break;
+    }
+
+    running_count += bucket_count;
+    if (running_count < bucket_count) running_count = UINT64_MAX;
+    double midpoint = hist_bucket_midpoint(bucket);
+    double weighted_midpoint = midpoint * (double)bucket_count;
+    result.sample_sum += weighted_midpoint;
+    result.sample_sum_squares += midpoint * weighted_midpoint;
+  }
+
+  while (bound_idx < bound_count)
+    cumulative_counts[bound_idx++] = running_count;
+  return result;
+}
+
 void
 hist_clamp(histogram_t *hist, double lower, double upper) {
   int needs_cull = 0;
