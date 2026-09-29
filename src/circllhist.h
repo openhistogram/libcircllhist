@@ -204,6 +204,29 @@ API_EXPORT(double) hist_approx_mean(const histogram_t *);
 API_EXPORT(double) hist_approx_sum(const histogram_t *);
 //! Approximate the standard deviation of all values stored in the histogram
 API_EXPORT(double) hist_approx_stddev(const histogram_t *);
+//! Results from hist_approx_summary().
+//!
+//! sample_count includes all stored samples, including samples in the NaN bucket.
+//! sample_sum and sample_sum_squares exclude samples in the NaN bucket.
+typedef struct {
+  int status;
+  uint64_t sample_count;
+  double sample_sum;
+  double sample_sum_squares;
+} hist_approx_summary_t;
+
+//! Compute sums, sample count, and cumulative bucket counts in one traversal.
+//!
+//! The bounds must be sorted in ascending order. Each cumulative count includes
+//! the complete histogram bucket containing its corresponding bound. This uses
+//! the same approximation as hist_approx_count_below_inclusive_many().
+//!
+//! The result status is zero on success and negative on invalid arguments.
+//! The caller owns cumulative_counts, which must contain bound_count elements.
+API_EXPORT(hist_approx_summary_t) hist_approx_summary(const histogram_t *hist,
+                                                       const double *bounds,
+                                                       int bound_count,
+                                                       uint64_t *cumulative_counts);
 //! Approximate the k-th moment of all values stored in the histogram
 //! \param hist
 //! \param k
@@ -223,6 +246,16 @@ API_EXPORT(uint64_t) hist_approx_count_below(const histogram_t *hist, double thr
 //! \param hist
 //! \param threshold
 API_EXPORT(uint64_t) hist_approx_count_below_inclusive(const histogram_t *hist, double threshold);
+
+//! Count samples in buckets at or below each threshold's bucket.
+//! The thresholds must be sorted in ascending order.
+//! \param hist
+//! \param thresholds sorted threshold values
+//! \param count number of thresholds
+//! \param results pre-allocated output counts
+API_EXPORT(void) hist_approx_count_below_inclusive_many(const histogram_t *hist,
+                                                        const double *thresholds, int count,
+                                                        uint64_t *results);
 
 //! Returns the number of values in buckets that are entirely lower than the bucket containing threshold
 //! \param hist
