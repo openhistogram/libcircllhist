@@ -3,13 +3,12 @@
 # in sync with that @v1 by hand when it changes.
 #
 # Requires, on THIS repo (public repos see no org secrets/vars):
-#   - secret ANTHROPIC_AUTH_TOKEN   (falls back to LITELLM_API_KEY)
-#   - variable ANTHROPIC_BASE_URL   (falls back to LITELLM_BASE_URL)
+#   - secret CLAUDE_PLATFORM_API_KEY  (the direct Anthropic Platform API key)
 #   - anthropics/claude-code-action allowed in this org's Actions policy
 #   - the Claude GitHub App installed on this repo (so claude[bot] can post)
-# The --model below must match whichever provider those secrets point at:
-# vertex_ai/claude-sonnet-4-6 for the LiteLLM gateway, or claude-sonnet-4-6
-# with ANTHROPIC_BASE_URL=https://api.anthropic.com for the direct Anthropic API.
+# Provider is the Claude Platform (direct Anthropic API): base
+# https://api.anthropic.com, model claude-sonnet-4-6. The bare model id is
+# required for the direct API; a "vertex_ai/" prefix is only for a LiteLLM gateway.
 #
 # Public-repo hardening: the mention and dismiss jobs are gated to
 # OWNER/MEMBER/COLLABORATOR, because their raw `gh api` steps bypass
@@ -64,9 +63,9 @@ jobs:
       - name: Run Claude Code Review
         uses: anthropics/claude-code-action@fad22eb3fa582b7357fc0ea48af6645851b884fd # v1
         env:
-          ANTHROPIC_BASE_URL: ${{ vars.ANTHROPIC_BASE_URL || vars.LITELLM_BASE_URL }}
+          ANTHROPIC_BASE_URL: https://api.anthropic.com
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_AUTH_TOKEN || secrets.LITELLM_API_KEY }}
+          anthropic_api_key: ${{ secrets.CLAUDE_PLATFORM_API_KEY }}
           track_progress: true
           classify_inline_comments: true
           prompt: |
@@ -112,7 +111,7 @@ jobs:
             stylistic, leave comments without requesting changes. Do not
             approve the pull request.
           claude_args: >-
-            --model vertex_ai/claude-sonnet-4-6
+            --model claude-sonnet-4-6
             --max-turns 30
             --allowedTools "Read,Grep,Glob,mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr review:*)"
 
@@ -154,11 +153,11 @@ jobs:
       - name: Run Claude
         uses: anthropics/claude-code-action@fad22eb3fa582b7357fc0ea48af6645851b884fd # v1
         env:
-          ANTHROPIC_BASE_URL: ${{ vars.ANTHROPIC_BASE_URL || vars.LITELLM_BASE_URL }}
+          ANTHROPIC_BASE_URL: https://api.anthropic.com
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_AUTH_TOKEN || secrets.LITELLM_API_KEY }}
+          anthropic_api_key: ${{ secrets.CLAUDE_PLATFORM_API_KEY }}
           claude_args: >-
-            --model vertex_ai/claude-sonnet-4-6
+            --model claude-sonnet-4-6
             --max-turns 30
             --append-system-prompt "When reviewing or answering questions about code in this pull request, first read .github/resources/CLAUDE.md if it exists and follow its documented conventions, focus areas, and known-intentional settings to avoid false positives. If you are re-reviewing after the author addressed earlier feedback, re-check the previously-blocking issues and any newly changed code: if one or more blockers still stand, restate only those and submit gh pr review --request-changes; if nothing blocking remains, do not submit a changes-requested review (never approve) and the stale verdict is cleared automatically."
             --allowedTools "Read,Grep,Glob,LS,mcp__github_comment__update_claude_comment,mcp__github_inline_comment__create_inline_comment,Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr review:*)"
