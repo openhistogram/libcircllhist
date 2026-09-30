@@ -387,6 +387,20 @@ void accumulate_test(accumulate_fn accumulate) {
   }
 }
 
+void accumulate_alias_test() {
+  histogram_t *tgt = hist_alloc();
+  hist_insert(tgt, 1, 2);
+  histogram_t *expected = hist_clone(tgt);
+  const histogram_t *sources[] = { tgt };
+
+  int rv = hist_accumulate_incremental(tgt, sources, 1);
+  is(rv == hist_bucket_count(expected));
+  is(hists_equal(tgt, expected));
+
+  hist_free(tgt);
+  hist_free(expected);
+}
+
 void accumulate_equivalence_test() {
   histogram_t *original = hist_alloc_nbins(1);
   histogram_t *incremental = hist_alloc_nbins(1);
@@ -839,6 +853,7 @@ int main() {
   T(accum_sub_test(hist_accumulate_incremental));
   T(accumulate_test(hist_accumulate));
   T(accumulate_test(hist_accumulate_incremental));
+  T(accumulate_alias_test());
   T(accumulate_equivalence_test());
   compress_test();
 

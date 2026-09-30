@@ -67,6 +67,10 @@ benchmark_accumulate(const char *hist_type, const char *accumulate_type,
     free(vals);
   }
 
+  // Warm up the target before timing steady-state merges. For disjoint
+  // sources, the target then contains every source bucket, so the timed
+  // loop does not measure repeated growth. benchmark_accumulate_growth()
+  // covers the growth-heavy worst case separately.
   accumulate(target, (const histogram_t * const *)sources, source_count);
   gettimeofday(&start, NULL);
   for(int idx=0; idx<iter; idx++)
