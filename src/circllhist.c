@@ -706,8 +706,19 @@ hist_approx_count_below_inclusive_many(const histogram_t *hist, const double *th
     return;
   }
   ASSERT_GOOD_HIST(hist);
+#ifndef NDEBUG
+  for(int j=0; j<count; j++)
+    assert(isfinite(thresholds[j]));
+  for(int j=1; j<count; j++)
+    assert(thresholds[j] >= thresholds[j - 1]);
+#endif
   for(int j=0; j<count; j++) {
     hist_bucket_t tgt = double_to_hist_bucket(thresholds[j]);
+    if(hist_bucket_isnan(tgt)) {
+      // Invalid thresholds violate the precondition; fill zero and continue.
+      results[j] = 0;
+      continue;
+    }
     for(; i < hist->used; i++) {
       if(hist_bucket_isnan(hist->bvs[i].bucket))
         continue;

@@ -262,6 +262,10 @@ count_below_inclusive_many_test() {
     isf(results[i] == expected[i], "threshold %g should return %" PRIu64,
         thresholds[i], expected[i]);
 
+  results[0] = 123;
+  hist_approx_count_below_inclusive_many(hist, thresholds, 0, results);
+  is(results[0] == 123);
+
   for(i=0; i<threshold_count; i++)
     isf(hist_approx_count_below_inclusive(hist, thresholds[i]) == expected[i],
         "single threshold %g should return the expected count", thresholds[i]);
