@@ -11,7 +11,6 @@
 #include <sys/time.h>
 
 typedef histogram_t *(*halloc_func)();
-typedef int (*accumulate_fn)(histogram_t *, const histogram_t * const *, int);
 halloc_func halloc = NULL;
 
 static int tcount = 1;
@@ -359,7 +358,7 @@ void clear_many_test() {
     hist_free(histograms[i]);
 }
 
-void accumulate_test(accumulate_fn accumulate) {
+void accumulate_test() {
   for(int fast = 0; fast < 2; fast++) {
     histogram_t *tgt = fast ? hist_fast_alloc_nbins(1) : hist_alloc_nbins(1);
     histogram_t *expected = fast ? hist_fast_alloc_nbins(1) : hist_alloc_nbins(1);
@@ -376,7 +375,7 @@ void accumulate_test(accumulate_fn accumulate) {
       hist_insert(expected, source_values[1][i], 3);
     }
 
-    int rv = accumulate(tgt, (const histogram_t * const *)sources, 3);
+    int rv = hist_accumulate(tgt, (const histogram_t * const *)sources, 3);
     is(rv == hist_bucket_count(expected));
     is(hists_equal(tgt, expected));
 
@@ -393,7 +392,7 @@ void accumulate_alias_test() {
   histogram_t *expected = hist_clone(tgt);
   const histogram_t *sources[] = { tgt };
 
-  int rv = hist_accumulate_incremental(tgt, sources, 1);
+  int rv = hist_accumulate(tgt, sources, 1);
   is(rv == hist_bucket_count(expected));
   is(hists_equal(tgt, expected));
 
@@ -401,50 +400,7 @@ void accumulate_alias_test() {
   hist_free(expected);
 }
 
-void accumulate_equivalence_test() {
-  histogram_t *original = hist_alloc_nbins(1);
-  histogram_t *incremental = hist_alloc_nbins(1);
-  histogram_t *sources[4];
-
-  for(int i=0; i<120; i++) {
-    int64_t value = 10 + (i % 90);
-    int scale = i / 90;
-    hist_insert_intscale(original, value, scale, 2);
-    hist_insert_intscale(incremental, value, scale, 2);
-  }
-
-  for(int source_idx=0; source_idx<4; source_idx++) {
-    sources[source_idx] = hist_alloc_nbins(1);
-    for(int i=0; i<160; i++) {
-      int bucket = i + source_idx * 37;
-      int64_t value = 10 + (bucket % 90);
-      if(source_idx == 3) value = -value;
-      hist_insert_intscale(sources[source_idx], value, bucket / 90, source_idx + 1);
-    }
-  }
-  hist_insert(sources[0], 0, 7);
-  hist_insert(sources[1], NAN, 3);
-
-  int original_rv = hist_accumulate(
-      original, (const histogram_t * const *)sources, 4);
-  int incremental_rv = hist_accumulate_incremental(
-      incremental, (const histogram_t * const *)sources, 4);
-  is(original_rv == incremental_rv);
-  is(hists_equal(original, incremental));
-
-  original_rv = hist_accumulate(
-      original, (const histogram_t * const *)sources, 4);
-  incremental_rv = hist_accumulate_incremental(
-      incremental, (const histogram_t * const *)sources, 4);
-  is(original_rv == incremental_rv);
-  is(hists_equal(original, incremental));
-
-  hist_free(original);
-  hist_free(incremental);
-  for(int i=0; i<4; i++) hist_free(sources[i]);
-}
-
-void accum_sub_test(accumulate_fn accumulate) {
+void accum_sub_test() {
   int i, j, samples = 0;
   histogram_t *tgt;
   histogram_t *t[10] = {NULL};
@@ -457,7 +413,7 @@ void accum_sub_test(accumulate_fn accumulate) {
     }
   }
   tgt = hist_alloc();
-  accumulate(tgt, (const histogram_t * const*)t, 10);
+  hist_accumulate(tgt, (const histogram_t * const*)t, 10);
   isf(samples == hist_sample_count(tgt), "should have %d samples", samples);
   int rv = hist_subtract(tgt, (const histogram_t * const*)t, 9);
   if(rv < 0) notokf("hist_subtract underrun: %d", rv);
@@ -639,7 +595,7 @@ void allocator_test() {
   }
 }
 
-static void issue_n(accumulate_fn accumulate) {
+static void issue_n() {
   histogram_t* main_thread_interval_hist = hist_alloc();
   histogram_t* per_thread_interval_hist = hist_alloc();
 
@@ -650,7 +606,7 @@ static void issue_n(accumulate_fn accumulate) {
   hist_approx_quantile(main_thread_interval_hist, in, 9, out);
 
   const histogram_t* const hist_array[1] = { per_thread_interval_hist };
-  accumulate(main_thread_interval_hist, hist_array, 1);
+  hist_accumulate(main_thread_interval_hist, hist_array, 1);
   hist_clear(per_thread_interval_hist);
 
   hist_insert_intscale(per_thread_interval_hist, 2, 0, 1);
@@ -658,7 +614,7 @@ static void issue_n(accumulate_fn accumulate) {
   isf(out[0] == 2.05, " min==2.0 != %g", out[0]);
 
   main_thread_interval_hist = hist_alloc();
-  accumulate(main_thread_interval_hist, hist_array, 1);
+  hist_accumulate(main_thread_interval_hist, hist_array, 1);
   hist_approx_quantile(main_thread_interval_hist, in, 9, out);
   isf(out[0] == 2.05, "min==1.0 != %g", 2.0);
 
@@ -849,12 +805,9 @@ int main() {
 
   T(sample_count_roll());
 
-  T(accum_sub_test(hist_accumulate));
-  T(accum_sub_test(hist_accumulate_incremental));
-  T(accumulate_test(hist_accumulate));
-  T(accumulate_test(hist_accumulate_incremental));
+  T(accum_sub_test());
+  T(accumulate_test());
   T(accumulate_alias_test());
-  T(accumulate_equivalence_test());
   compress_test();
 
   T(downsample());
@@ -862,8 +815,7 @@ int main() {
   T(simple_clear());
   T(clear_many_test());
 
-  T(issue_n(hist_accumulate));
-  T(issue_n(hist_accumulate_incremental));
+  T(issue_n());
 
   T(diff_test());
 

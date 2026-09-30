@@ -220,19 +220,14 @@ int main() {
           int source_count = source_counts[source_idx];
           int accumulate_iter = iter / (source_count * source_count);
           if(accumulate_iter < 10) accumulate_iter = 10;
-          benchmark_accumulate((ai%2 == 0) ? "normal" : "fast", "original",
+          benchmark_accumulate((ai%2 == 0) ? "normal" : "fast", "accumulate",
                                hist_accumulate, accumulate_iter, size,
-                               source_count, overlap);
-          benchmark_accumulate((ai%2 == 0) ? "normal" : "fast", "incremental",
-                               hist_accumulate_incremental, accumulate_iter, size,
                                source_count, overlap);
         }
       }
       }
     }
   }
-  benchmark_accumulate_growth("ascending", true, "original", hist_accumulate);
-  benchmark_accumulate_growth("ascending", true, "incremental", hist_accumulate_incremental);
-  benchmark_accumulate_growth("descending", false, "original", hist_accumulate);
-  benchmark_accumulate_growth("descending", false, "incremental", hist_accumulate_incremental);
+  benchmark_accumulate_growth("ascending", true, "accumulate", hist_accumulate);
+  benchmark_accumulate_growth("descending", false, "accumulate", hist_accumulate);
 }

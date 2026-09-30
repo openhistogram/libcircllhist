@@ -1253,65 +1253,6 @@ hist_bucket_idx_bucket(const histogram_t *hist, int idx,
   return 1;
 }
 
-static int
-hist_needed_merge_size_fc(histogram_t **hist, int cnt,
-                          void (*f)(histogram_t *tgt, int tgtidx,
-                                    histogram_t *src, int srcidx),
-                          histogram_t *tgt) {
-  ASSERT_GOOD_HIST(hist[0]);
-  unsigned short idx_static[8192];
-  unsigned short *idx = idx_static;
-  int i, count = 0;
-  if(cnt > 8192) {
-    idx = malloc(cnt * sizeof(*idx));
-    if(!idx) return -1;
-  }
-  memset(idx, 0, cnt * sizeof(*idx));
-  while(1) {
-    hist_bucket_t smallest = { .exp = 0, .val = 0 };
-    for(i=0;i<cnt;i++)
-      if(hist[i] != NULL && idx[i] < hist[i]->used) {
-        smallest = hist[i]->bvs[idx[i]].bucket;
-        break;
-      }
-    if(i == cnt) break; /* there is no min -- no items */
-    for(;i<cnt;i++) { /* see if this is the smallest. */
-      if(hist[i] != NULL && idx[i] < hist[i]->used)
-        if(hist_bucket_cmp(smallest, hist[i]->bvs[idx[i]].bucket) < 0)
-          smallest = hist[i]->bvs[idx[i]].bucket;
-    }
-    /* Now zip back through and advanced all smallests */
-    for(i=0;i<cnt;i++) {
-      if(hist[i] != NULL && idx[i] < hist[i]->used &&
-          hist_bucket_cmp(smallest, hist[i]->bvs[idx[i]].bucket) == 0) {
-        if(f) f(tgt, count, hist[i], idx[i]);
-        idx[i]++;
-      }
-    }
-    count++;
-  }
-  assert(count <= MAX_HIST_BINS);
-  if(idx != idx_static) free(idx);
-  return count;
-}
-
-static void
-internal_bucket_accum(histogram_t *tgt, int tgtidx,
-                      histogram_t *src, int srcidx) {
-  uint64_t newval;
-  ASSERT_GOOD_HIST(tgt);
-  assert(tgtidx < tgt->allocd);
-  if(tgt->used == tgtidx) {
-    tgt->bvs[tgtidx].bucket = src->bvs[srcidx].bucket;
-    tgt->used++;
-  }
-  assert(hist_bucket_cmp(tgt->bvs[tgtidx].bucket,
-                         src->bvs[srcidx].bucket) == 0);
-  newval = tgt->bvs[tgtidx].count + src->bvs[srcidx].count;
-  if(newval < tgt->bvs[tgtidx].count) newval = ~(uint64_t)0;
-  tgt->bvs[tgtidx].count = newval;
-}
-
 int
 hist_subtract(histogram_t *tgt, const histogram_t * const *hist, int cnt) {
   int i, tgt_idx, src_idx;
@@ -1475,43 +1416,6 @@ hist_add_as_int64(histogram_t *tgt, const histogram_t *src) {
   return rv;
 }
 
-static int
-hist_needed_merge_size(histogram_t **hist, int cnt) {
-  return hist_needed_merge_size_fc(hist, cnt, NULL, NULL);
-}
-
-int
-hist_accumulate(histogram_t *tgt, const histogram_t* const *src, int cnt) {
-  int tgtneeds;
-  ASSERT_GOOD_HIST(tgt);
-  void *oldtgtbuff = tgt->bvs;
-  histogram_t tgt_copy;
-  histogram_t *inclusive_src_static[1025];
-  histogram_t **inclusive_src = inclusive_src_static;
-  if(cnt+1 > 1025) {
-    inclusive_src = malloc(sizeof(histogram_t *) * (cnt+1));
-    if(!inclusive_src) return -1;
-  }
-  memcpy(&tgt_copy, tgt, sizeof(*tgt));
-  memcpy(inclusive_src, src, sizeof(*src)*cnt);
-  inclusive_src[cnt] = &tgt_copy;
-  tgtneeds = hist_needed_merge_size(inclusive_src, cnt+1);
-  if(tgtneeds < 0) {
-    if(inclusive_src != inclusive_src_static) free(inclusive_src);
-    return -1;
-  }
-  assert(tgtneeds <= MAX_HIST_BINS);
-  tgt->allocd = tgtneeds;
-  tgt->used = 0;
-  if (! tgt->allocd) tgt->allocd = 1;
-  tgt->bvs = tgt->allocator->calloc(tgt->allocd, sizeof(*tgt->bvs));
-  hist_needed_merge_size_fc(inclusive_src, cnt+1, internal_bucket_accum, tgt);
-  if(oldtgtbuff) tgt->allocator->free(oldtgtbuff);
-  if(inclusive_src != inclusive_src_static) free(inclusive_src);
-  ASSERT_GOOD_HIST(tgt);
-  return tgt->used;
-}
-
 static uint64_t
 hist_saturating_add(uint64_t left, uint64_t right) {
   uint64_t sum = left + right;
@@ -1582,7 +1486,7 @@ hist_accumulate_one(histogram_t *tgt, const histogram_t *src) {
 }
 
 int
-hist_accumulate_incremental(histogram_t *tgt, const histogram_t * const *src, int cnt) {
+hist_accumulate(histogram_t *tgt, const histogram_t * const *src, int cnt) {
   ASSERT_GOOD_HIST(tgt);
   for(int i = 0; i < cnt; i++) {
     if(!src[i] || tgt == src[i]) continue;
