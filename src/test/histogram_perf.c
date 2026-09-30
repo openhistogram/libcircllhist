@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <math.h>
 #include <stdbool.h>
 #include <circllhist.h>
@@ -6,6 +7,7 @@
 #include <assert.h>
 
 typedef histogram_t *(*halloc_func)();
+typedef int (*accumulate_fn)(histogram_t *, const histogram_t * const *, int);
 
 halloc_func halloc = NULL;
 
@@ -36,14 +38,113 @@ histogram_t *buildI(histogram_t *out, struct sval *vals, int nvals) {
     hist_insert_raw(out, int_scale_to_hist_bucket(vals[i].val, vals[i].scale), 1);
   return out;
 }
-struct sval *buildNIvals(int n) {
+struct sval *buildNIvalsOffset(int n, int offset) {
   int i;
   struct sval *vals = malloc(sizeof(*vals) * n);
   for(i=0;i<n;i++) {
-    vals[i].val = ((i%90)+10);
-    vals[i].scale = i/90;
+    int bucket = offset + i;
+    vals[i].val = ((bucket%90)+10);
+    vals[i].scale = bucket/90;
   }
   return vals;
+}
+struct sval *buildNIvals(int n) {
+  return buildNIvalsOffset(n, 0);
+}
+
+static void
+benchmark_accumulate(const char *hist_type, const char *accumulate_type,
+                     accumulate_fn accumulate, int iter, int size,
+                     int source_count, bool overlap) {
+  struct timeval start, finish;
+  histogram_t **sources = malloc(source_count * sizeof(*sources));
+  histogram_t *target = halloc();
+
+  for(int i=0; i<source_count; i++) {
+    int offset = overlap ? 0 : i * size;
+    struct sval *vals = buildNIvalsOffset(size, offset);
+    sources[i] = buildI(NULL, vals, size);
+    free(vals);
+  }
+
+  // Warm up the target before timing steady-state merges. For disjoint
+  // sources, the target then contains every source bucket, so the timed
+  // loop does not measure repeated growth. benchmark_accumulate_growth()
+  // covers the growth-heavy worst case separately.
+  accumulate(target, (const histogram_t * const *)sources, source_count);
+  gettimeofday(&start, NULL);
+  for(int idx=0; idx<iter; idx++)
+    accumulate(target, (const histogram_t * const *)sources, source_count);
+  gettimeofday(&finish, NULL);
+
+  int expected_buckets = overlap ? size : size * source_count;
+  if(hist_num_buckets(target) != expected_buckets) abort();
+  double elapsed = finish.tv_sec - start.tv_sec;
+  elapsed += (finish.tv_usec/1000000.0) - (start.tv_usec/1000000.0);
+  printf("accumulate,%s,%s,%s,%d,%d,%d,%0.2f\n",
+         hist_type, accumulate_type, overlap ? "overlap" : "disjoint",
+         source_count, iter, size,
+         (elapsed / (double)iter) * 1000000000.0);
+
+  hist_free(target);
+  for(int i=0; i<source_count; i++) hist_free(sources[i]);
+  free(sources);
+}
+
+static hist_bucket_t
+bucket_at(int idx) {
+  const int negative_buckets = 90 * 256;
+  if(idx == 0) return double_to_hist_bucket(NAN);
+  idx--;
+  if(idx < negative_buckets) {
+    hist_bucket_t bucket = {
+      .val = -99 + (idx % 90),
+      .exp = 127 - (idx / 90)
+    };
+    return bucket;
+  }
+  idx -= negative_buckets;
+  if(idx == 0) return (hist_bucket_t) { .val = 0, .exp = 0 };
+  idx--;
+  return (hist_bucket_t) {
+    .val = 10 + (idx % 90),
+    .exp = -128 + (idx / 90)
+  };
+}
+
+/*
+ * Measure regular one-bucket-at-a-time growth of the target histogram.
+ * This is the incremental accumulator's worst case because each merge scans
+ * the increasingly large target, and ascending and descending orders cover
+ * growth at either end of the bucket range.
+ */
+static void
+benchmark_accumulate_growth(const char *order, bool ascending,
+                            const char *accumulate_type, accumulate_fn accumulate) {
+  const int max_buckets = 2 + 2 * 90 * 256;
+  struct timeval start, finish;
+  histogram_t *source = hist_alloc_nbins(1);
+  histogram_t *target = hist_alloc();
+  const histogram_t *sources[] = { source };
+
+  gettimeofday(&start, NULL);
+  for(int i=0; i<max_buckets; i++) {
+    int bucket_idx = ascending ? i : max_buckets - i - 1;
+    hist_clear(source);
+    hist_insert_raw(source, bucket_at(bucket_idx), 1);
+    if(accumulate(target, sources, 1) < 0) abort();
+  }
+  gettimeofday(&finish, NULL);
+
+  if(hist_num_buckets(target) != max_buckets) abort();
+  double elapsed = finish.tv_sec - start.tv_sec;
+  elapsed += (finish.tv_usec/1000000.0) - (start.tv_usec/1000000.0);
+  printf("accumulate-growth-worst,%s,%s,%d,%0.0f,%0.2f\n",
+         order, accumulate_type, max_buckets, elapsed * 1000000000.0,
+         (elapsed / max_buckets) * 1000000000.0);
+
+  hist_free(target);
+  hist_free(source);
 }
 
 const int iters[] = { 100, 10000, 100000 };
@@ -111,7 +212,27 @@ int main() {
       hist_free(hist);
       free(vals);
 }
+      const int source_counts[] = { 1, 8, 32 };
+      for(int overlap=0; overlap<2; overlap++) {
+        for(int source_idx=0;
+            source_idx<sizeof(source_counts)/sizeof(*source_counts);
+            source_idx++) {
+          int source_count = source_counts[source_idx];
+          int accumulate_iter = iter / (source_count * source_count);
+          if(accumulate_iter < 10) accumulate_iter = 10;
+          benchmark_accumulate((ai%2 == 0) ? "normal" : "fast", "original",
+                               hist_accumulate, accumulate_iter, size,
+                               source_count, overlap);
+          benchmark_accumulate((ai%2 == 0) ? "normal" : "fast", "incremental",
+                               hist_accumulate_incremental, accumulate_iter, size,
+                               source_count, overlap);
+        }
+      }
       }
     }
   }
+  benchmark_accumulate_growth("ascending", true, "original", hist_accumulate);
+  benchmark_accumulate_growth("ascending", true, "incremental", hist_accumulate_incremental);
+  benchmark_accumulate_growth("descending", false, "original", hist_accumulate);
+  benchmark_accumulate_growth("descending", false, "incremental", hist_accumulate_incremental);
 }

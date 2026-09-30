@@ -1512,6 +1512,87 @@ hist_accumulate(histogram_t *tgt, const histogram_t* const *src, int cnt) {
   return tgt->used;
 }
 
+static uint64_t
+hist_saturating_add(uint64_t left, uint64_t right) {
+  uint64_t sum = left + right;
+  return sum < left ? UINT64_MAX : sum;
+}
+
+static int
+hist_reserve(histogram_t *hist, int needed) {
+  if(needed <= hist->allocd) return 0;
+  if(needed > MAX_HIST_BINS) return -1;
+
+  int allocd = ((needed + DEFAULT_HIST_SIZE - 1) / DEFAULT_HIST_SIZE) * DEFAULT_HIST_SIZE;
+  if(allocd > MAX_HIST_BINS) allocd = MAX_HIST_BINS;
+  struct hist_bv_pair *bvs = hist->allocator->malloc(allocd * sizeof(*bvs));
+  if(!bvs) return -1;
+
+  if(hist->used > 0) memcpy(bvs, hist->bvs, hist->used * sizeof(*bvs));
+  if(hist->bvs) hist->allocator->free(hist->bvs);
+  hist->bvs = bvs;
+  hist->allocd = allocd;
+  return 0;
+}
+
+static int
+hist_accumulate_one(histogram_t *tgt, const histogram_t *src) {
+  int tgt_idx = 0;
+  int src_idx = 0;
+  int matching_bucket_count = 0;
+
+  // count matching buckets so we can calculate target size
+  while(tgt_idx < tgt->used && src_idx < src->used) {
+    int cmp = hist_bucket_cmp(tgt->bvs[tgt_idx].bucket,
+                              src->bvs[src_idx].bucket);
+    if(cmp == 0) {
+      matching_bucket_count++;
+      tgt_idx++;
+      src_idx++;
+    }
+    else if(cmp > 0) tgt_idx++;
+    else src_idx++;
+  }
+
+  int result_bucket_count = tgt->used + src->used - matching_bucket_count;
+  if(hist_reserve(tgt, result_bucket_count) < 0) return -1;
+
+  // Merge in reverse to avoid overwriting later buckets
+  tgt_idx = tgt->used;
+  src_idx = src->used;
+  int write_idx = result_bucket_count;
+  while(tgt_idx > 0 && src_idx > 0) {
+    int cmp = hist_bucket_cmp(tgt->bvs[tgt_idx - 1].bucket,
+                              src->bvs[src_idx - 1].bucket);
+    if(cmp == 0) {
+      tgt->bvs[--write_idx].bucket = tgt->bvs[tgt_idx - 1].bucket;
+      tgt->bvs[write_idx].count = hist_saturating_add(tgt->bvs[tgt_idx - 1].count,
+                                                      src->bvs[src_idx - 1].count);
+      tgt_idx--;
+      src_idx--;
+    }
+    else if(cmp < 0) tgt->bvs[--write_idx] = tgt->bvs[--tgt_idx];
+    else tgt->bvs[--write_idx] = src->bvs[--src_idx];
+  }
+  while(src_idx > 0) tgt->bvs[--write_idx] = src->bvs[--src_idx];
+  while(tgt_idx > 0) tgt->bvs[--write_idx] = tgt->bvs[--tgt_idx];
+  assert(write_idx == 0);
+  tgt->used = result_bucket_count;
+  return 0;
+}
+
+int
+hist_accumulate_incremental(histogram_t *tgt, const histogram_t * const *src, int cnt) {
+  ASSERT_GOOD_HIST(tgt);
+  for(int i = 0; i < cnt; i++) {
+    if(!src[i] || tgt == src[i]) continue;
+    ASSERT_GOOD_HIST(src[i]);
+    if(hist_accumulate_one(tgt, src[i]) < 0) return -1;
+  }
+  ASSERT_GOOD_HIST(tgt);
+  return tgt->used;
+}
+
 int
 hist_num_buckets(const histogram_t *hist) {
   return hist->used;
