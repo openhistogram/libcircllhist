@@ -691,19 +691,43 @@ uint64_t hist_approx_count_above(const histogram_t *hist, double threshold) {
 
 uint64_t
 hist_approx_count_below_inclusive(const histogram_t *hist, double threshold) {
-  int i;
+  uint64_t result;
+  hist_approx_count_below_inclusive_many(hist, &threshold, 1, &result);
+  return result;
+}
+
+void
+hist_approx_count_below_inclusive_many(const histogram_t *hist, const double *thresholds,
+                                       int count, uint64_t *results) {
+  int i = 0;
   uint64_t running_count = 0;
-  if(!hist) return 0;
+  if(!hist) {
+    for(int j=0; j<count; j++) results[j] = 0;
+    return;
+  }
   ASSERT_GOOD_HIST(hist);
-  hist_bucket_t tgt = double_to_hist_bucket(threshold);
-  for(i=0; i<hist->used; i++) {
-    if(hist_bucket_isnan(hist->bvs[i].bucket)) continue;
-    if(hist_bucket_cmp(tgt, hist->bvs[i].bucket) <= 0) {
+#ifndef NDEBUG
+  for(int j=0; j<count; j++)
+    assert(isfinite(thresholds[j]));
+  for(int j=1; j<count; j++)
+    assert(thresholds[j] >= thresholds[j - 1]);
+#endif
+  for(int j=0; j<count; j++) {
+    hist_bucket_t tgt = double_to_hist_bucket(thresholds[j]);
+    if(hist_bucket_isnan(tgt)) {
+      // Invalid thresholds violate the precondition; fill zero and continue.
+      results[j] = 0;
+      continue;
+    }
+    for(; i < hist->used; i++) {
+      if(hist_bucket_isnan(hist->bvs[i].bucket))
+        continue;
+      if(hist_bucket_cmp(tgt, hist->bvs[i].bucket) > 0)
+        break;
       running_count += hist->bvs[i].count;
     }
-    else break;
+    results[j] = running_count;
   }
-  return running_count;
 }
 
 uint64_t

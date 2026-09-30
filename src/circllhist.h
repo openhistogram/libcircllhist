@@ -224,6 +224,16 @@ API_EXPORT(uint64_t) hist_approx_count_below(const histogram_t *hist, double thr
 //! \param threshold
 API_EXPORT(uint64_t) hist_approx_count_below_inclusive(const histogram_t *hist, double threshold);
 
+//! Count samples in buckets at or below each threshold's bucket.
+//! The thresholds must be finite, representable, and sorted in ascending order.
+//! \param hist
+//! \param thresholds sorted threshold values
+//! \param count number of thresholds
+//! \param results pre-allocated output counts
+API_EXPORT(void) hist_approx_count_below_inclusive_many(const histogram_t *hist,
+                                                        const double *thresholds, int count,
+                                                        uint64_t *results);
+
 //! Returns the number of values in buckets that are entirely lower than the bucket containing threshold
 //! \param hist
 //! \param threshold
