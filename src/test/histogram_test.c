@@ -331,6 +331,45 @@ histogram_t *build(double *vals, int nvals) {
 }
 
 void
+hist_approx_summary_test() {
+  double bounds[] = { -2.0, -1.2, 0.0, 1.2, 10.0, INFINITY };
+  uint64_t expected[] = { 0, 2, 5, 9, 14, 14 };
+  uint64_t results[sizeof(bounds) / sizeof(bounds[0])];
+  histogram_t *hist = halloc();
+  hist_approx_summary_t summary;
+
+  hist_insert(hist, -1.23, 2);
+  hist_insert(hist, 0.0, 3);
+  hist_insert(hist, 1.23, 4);
+  hist_insert(hist, 10.0, 5);
+
+  summary = hist_approx_summary(hist, bounds, sizeof(bounds) / sizeof(bounds[0]), results);
+  is(summary.status == 0);
+  is(summary.sample_count == 14);
+  is(double_equals(summary.sample_sum, hist_approx_sum(hist)));
+  double expected_sum_squares =
+      2 * pow(hist_bucket_midpoint(double_to_hist_bucket(-1.23)), 2) +
+      3 * pow(hist_bucket_midpoint(double_to_hist_bucket(0.0)), 2) +
+      4 * pow(hist_bucket_midpoint(double_to_hist_bucket(1.23)), 2) +
+      5 * pow(hist_bucket_midpoint(double_to_hist_bucket(10.0)), 2);
+  is(double_equals(summary.sample_sum_squares, expected_sum_squares));
+  for (size_t i = 0; i < sizeof(bounds) / sizeof(bounds[0]); ++i)
+    isf(results[i] == expected[i], "summary bound %g should return %" PRIu64,
+        bounds[i], expected[i]);
+
+  hist_free(hist);
+
+  double unsorted[] = { 1.0, 0.0 };
+  uint64_t unsorted_results[2];
+  summary = hist_approx_summary(NULL, unsorted, 2, unsorted_results);
+  is(summary.status < 0);
+
+  summary = hist_approx_summary(NULL, NULL, 0, NULL);
+  is(summary.status == 0 && summary.sample_count == 0 && summary.sample_sum == 0.0 &&
+     summary.sample_sum_squares == 0.0);
+}
+
+void
 count_below_inclusive_many_test() {
   double thresholds[] = { -2.0, -1.3, -1.2, -1.2, 0.0, 1.2, 10.0 };
   uint64_t expected[] = { 0, 0, 2, 2, 5, 9, 14 };
@@ -963,6 +1002,7 @@ int main() {
   T(is(0 == hist_approx_sum(NULL)));
   T(is(0 == hist_approx_count_below(NULL, 1)));
   T(is(0 == hist_approx_count_above(NULL, 1)));
+  T(hist_approx_summary_test());
   T(count_below_inclusive_many_test());
 
 #define ADHOC_TEST(l, u, mode, pred, val) \
