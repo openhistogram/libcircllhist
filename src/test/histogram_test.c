@@ -358,6 +358,48 @@ void clear_many_test() {
     hist_free(histograms[i]);
 }
 
+void accumulate_test() {
+  for(int fast = 0; fast < 2; fast++) {
+    histogram_t *tgt = fast ? hist_fast_alloc_nbins(1) : hist_alloc_nbins(1);
+    histogram_t *expected = fast ? hist_fast_alloc_nbins(1) : hist_alloc_nbins(1);
+    histogram_t *sources[3] = { hist_alloc_nbins(1), NULL, hist_alloc_nbins(1) };
+    double target_values[] = { 1, 3, 5 };
+    double source_values[][3] = { { 2, 3, 6 }, { -1, 3, 7 } };
+
+    for(int i = 0; i < 3; i++) {
+      hist_insert(tgt, target_values[i], 1);
+      hist_insert(expected, target_values[i], 1);
+      hist_insert(sources[0], source_values[0][i], 2);
+      hist_insert(expected, source_values[0][i], 2);
+      hist_insert(sources[2], source_values[1][i], 3);
+      hist_insert(expected, source_values[1][i], 3);
+    }
+
+    int rv = hist_accumulate(tgt, (const histogram_t * const *)sources, 3);
+    is(rv == hist_bucket_count(expected));
+    is(hists_equal(tgt, expected));
+
+    hist_free(tgt);
+    hist_free(expected);
+    hist_free(sources[0]);
+    hist_free(sources[2]);
+  }
+}
+
+void accumulate_alias_test() {
+  histogram_t *tgt = hist_alloc();
+  hist_insert(tgt, 1, 2);
+  histogram_t *expected = hist_clone(tgt);
+  const histogram_t *sources[] = { tgt };
+
+  int rv = hist_accumulate(tgt, sources, 1);
+  is(rv == hist_bucket_count(expected));
+  is(hists_equal(tgt, expected));
+
+  hist_free(tgt);
+  hist_free(expected);
+}
+
 void accum_sub_test() {
   int i, j, samples = 0;
   histogram_t *tgt;
@@ -764,6 +806,8 @@ int main() {
   T(sample_count_roll());
 
   T(accum_sub_test());
+  T(accumulate_test());
+  T(accumulate_alias_test());
   compress_test();
 
   T(downsample());
