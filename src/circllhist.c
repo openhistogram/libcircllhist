@@ -139,6 +139,7 @@ static const hist_bucket_t hbnan = { (int8_t)0xff, 0 };
 #define private_nan private_nan_union.private_nan_double_rep
 #define HIST_POSITIVE_MIN_I  1e-128
 #define HIST_NEGATIVE_MAX_I -1e-128
+#define HIST_LOG10_2        0.3010299956639812
 
 static double power_of_ten[256] = {
   1, 10, 100, 1000, 10000, 100000, 1e+06, 1e+07, 1e+08, 1e+09, 1e+10,
@@ -169,6 +170,31 @@ static double power_of_ten[256] = {
   1e-15, 1e-14, 1e-13, 1e-12, 1e-11, 1e-10, 1e-09, 1e-08, 1e-07, 1e-06,
   1e-05, 0.0001, 0.001, 0.01, 0.1
 };
+
+static inline int
+hist_decimal_exponent(double d) {
+  /*
+   * This avoids the comparatively expensive log10() transcendental
+   * calculation.  ilogb() can usually extract the binary exponent directly
+   * from the floating-point representation, then one multiply and floor()
+   * convert it to an approximate decimal exponent:
+   *
+   *     log10(d) = log2(d) * log10(2)
+   *
+   * ilogb() supplies floor(log2(d)), rather than the full log2(d), so the
+   * estimate omits the mantissa and can be off near a power of ten.  Compare
+   * with neighboring powers of ten to correct that estimate.
+   */
+  int binary_exp = ilogb(d);
+  int decimal_exp = (int)floor((double)binary_exp * HIST_LOG10_2);
+  if(decimal_exp < -128) decimal_exp = -128;
+  if(d < power_of_ten[(uint8_t)decimal_exp]) {
+    decimal_exp--;
+  } else if(decimal_exp < 127 && d >= power_of_ten[(uint8_t)(decimal_exp + 1)]) {
+    decimal_exp++;
+  }
+  return decimal_exp;
+}
 
 static const char __b64[] = {
   'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
@@ -980,7 +1006,7 @@ double_to_hist_bucket(double d) {
     uint8_t *pidx;
     int sign = (d < 0) ? -1 : 1;
     d = fabs(d);
-    big_exp = (int32_t)floor(log10(d));
+    big_exp = hist_decimal_exponent(d);
     hb.exp = (int8_t)big_exp;
     if(unlikely(hb.exp != big_exp)) { /* we rolled */
       if(unlikely(big_exp >= 0)) return hbnan;

@@ -60,6 +60,91 @@ bool hists_equal(histogram_t *a, histogram_t *b) {
   }
   return true;
 }
+static int
+hist_decimal_exponent_old(double d) {
+  return (int)floor(log10(d));
+}
+
+static bool
+hist_decimal_exponent_matches(double input) {
+  hist_bucket_t actual = double_to_hist_bucket(input);
+  /* Values below the histogram's supported range must map to zero. */
+  if (fabs(input) < 1e-128) {
+    if (actual.val != 0 || actual.exp != 0) {
+      notokf("value=%g (%a) expected zero bucket actual=%d/%d",
+             input, input, actual.val, actual.exp);
+      return false;
+    }
+    return true;
+  }
+  int expected = hist_decimal_exponent_old(fabs(input));
+  /* Bucket normalization can represent a value just below 10^e as 10e^e. */
+  if (expected >= -128 && expected <= 127 && actual.exp != expected &&
+      !(actual.exp == expected + 1 &&
+        (actual.val == 10 || actual.val == -10))) {
+    notokf("value=%g (%a) expected exponent=%d actual=%d/%d",
+           input, input, expected, actual.val, actual.exp);
+    return false;
+  }
+  return true;
+}
+
+static void
+hist_decimal_exponent_range_test(void) {
+  /* Cover the supported decimal range with several decimal mantissas. */
+  for (int exponent = -128; exponent <= 127; exponent++) {
+    for (int value = 10; value <= 99; value++) {
+      char decimal[64];
+      snprintf(decimal, sizeof(decimal), "%d.%de%d", value / 10,
+               value % 10, exponent);
+      double magnitude = strtod(decimal, NULL);
+      for (int sign = -1; sign <= 1; sign += 2) {
+        if (!hist_decimal_exponent_matches(sign * magnitude)) return;
+      }
+    }
+  }
+
+  /* Sample binary mantissas across every normal binary exponent. */
+  for (int binary_exp = -1022; binary_exp <= 1022; binary_exp++) {
+    for (int mantissa = 0; mantissa <= 1023; mantissa++) {
+      double magnitude = ldexp(1.0 + (double)mantissa / 1024.0, binary_exp);
+      for (int sign = -1; sign <= 1; sign += 2) {
+        if (!hist_decimal_exponent_matches(sign * magnitude)) return;
+      }
+    }
+  }
+
+  /* Add deterministic samples with arbitrary bits in the 52-bit mantissa. */
+  uint64_t random_state = UINT64_C(0x9e3779b97f4a7c15);
+  for (int binary_exp = -1022; binary_exp <= 1022; binary_exp++) {
+    for (int sample = 0; sample < 8; sample++) {
+      random_state = random_state * UINT64_C(6364136223846793005) + 1;
+      uint64_t mantissa_bits = random_state & ((UINT64_C(1) << 52) - 1);
+      double fraction = (double)mantissa_bits / (double)(UINT64_C(1) << 52);
+      double magnitude = ldexp(1.0 + fraction, binary_exp);
+      for (int sign = -1; sign <= 1; sign += 2) {
+        if (!hist_decimal_exponent_matches(sign * magnitude)) return;
+      }
+    }
+  }
+  for (int sign = -1; sign <= 1; sign += 2) {
+    if (!hist_decimal_exponent_matches(sign * ldexp(1.0, 1023))) return;
+  }
+
+  /* Check both representable neighbors of every decimal power boundary. */
+  for (int exponent = -128; exponent <= 127; exponent++) {
+    double boundary = pow(10.0, exponent);
+    double lower = nextafter(boundary, 0.0);
+    double upper = nextafter(boundary, INFINITY);
+    for (int sign = -1; sign <= 1; sign += 2) {
+      if (!hist_decimal_exponent_matches(sign * lower)) return;
+      if (!hist_decimal_exponent_matches(sign * boundary)) return;
+      if (!hist_decimal_exponent_matches(sign * upper)) return;
+    }
+  }
+  ok();
+}
+
 bool double_equals(double a, double b) {
   double r, diff, max = fabs(a);
   if(fabs(b) > max) max = fabs(b);
@@ -74,6 +159,7 @@ void bucket_tests() {
   hist_bucket_t b, o;
   char hbstr[HIST_BUCKET_MAX_STRING_SIZE] = {0};
 
+  T(hist_decimal_exponent_range_test());
   b = int_scale_to_hist_bucket(INT64_MIN, 1);
   T(is(b.val == -92 && b.exp == 19));
   b = int_scale_to_hist_bucket(INT64_MAX, 1);
