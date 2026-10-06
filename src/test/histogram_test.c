@@ -563,6 +563,60 @@ void accumulate_test() {
   }
 }
 
+static void
+fast_accumulate_index_case(const double *target_values, int target_count,
+                           const double *source_values, int source_count,
+                           const uint64_t *expected_counts) {
+  histogram_t *target = hist_fast_alloc();
+  histogram_t *source = hist_alloc();
+  const histogram_t *sources[] = { source };
+
+  for(int i = 0; i < target_count; i++)
+    hist_insert(target, target_values[i], 1);
+  for(int i = 0; i < source_count; i++)
+    hist_insert(source, source_values[i], 1);
+
+  int rv = hist_accumulate(target, sources, 1);
+  isf(rv == hist_bucket_count(target), "%s",
+      "accumulation should return the target bucket count");
+
+  /* Exercise the fast lookup for every bucket after accumulation. */
+  for(int value = 1; value <= 9; value++)
+    hist_insert(target, value, 1);
+
+  for(int value = 1; value <= 9; value++)
+    isf(hist_approx_count_nearby(target, value) == expected_counts[value - 1] + 1,
+        "bucket %d should have count %" PRIu64, value,
+        expected_counts[value - 1] + 1);
+
+  hist_free(target);
+  hist_free(source);
+}
+
+void fast_accumulate_index_test() {
+  static const double target_values[] = { 2, 4, 6, 8 };
+  static const double source_beginning[] = { 1 };
+  static const double source_middle[] = { 5 };
+  static const double source_end[] = { 9 };
+  static const double source_existing[] = { 4 };
+  static const double source_multiple[] = { 1, 5, 9 };
+  static const uint64_t beginning_counts[] = { 1, 1, 0, 1, 0, 1, 0, 1, 0 };
+  static const uint64_t middle_counts[] = { 0, 1, 0, 1, 1, 1, 0, 1, 0 };
+  static const uint64_t end_counts[] = { 0, 1, 0, 1, 0, 1, 0, 1, 1 };
+  static const uint64_t existing_counts[] = { 0, 1, 0, 2, 0, 1, 0, 1, 0 };
+  static const uint64_t multiple_counts[] = { 1, 1, 0, 1, 1, 1, 0, 1, 1 };
+
+  fast_accumulate_index_case(target_values, 4, source_beginning, 1,
+                             beginning_counts);
+  fast_accumulate_index_case(target_values, 4, source_middle, 1,
+                             middle_counts);
+  fast_accumulate_index_case(target_values, 4, source_end, 1, end_counts);
+  fast_accumulate_index_case(target_values, 4, source_existing, 1,
+                             existing_counts);
+  fast_accumulate_index_case(target_values, 4, source_multiple, 3,
+                             multiple_counts);
+}
+
 void accumulate_alias_test() {
   histogram_t *tgt = hist_alloc();
   hist_insert(tgt, 1, 2);
@@ -984,6 +1038,7 @@ int main() {
 
   T(accum_sub_test());
   T(accumulate_test());
+  T(fast_accumulate_index_test());
   T(accumulate_alias_test());
   compress_test();
 
