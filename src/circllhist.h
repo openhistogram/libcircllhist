@@ -156,7 +156,9 @@ API_EXPORT(uint64_t) hist_sample_count(const histogram_t *hist);
 API_EXPORT(int) hist_bucket_idx(const histogram_t *hist, int idx, double *v, uint64_t *c);
 //! Get bucket+count for bucket at position idx. Valid positions are 0 .. hist_bucket_count()
 API_EXPORT(int) hist_bucket_idx_bucket(const histogram_t *hist, int idx, hist_bucket_t *b, uint64_t *c);
-//! Accumulate bins from each of cnt histograms in src onto tgt
+//! Accumulate bins from each of cnt histograms in src onto tgt.
+//! Ignores source entries that alias the target. Returns -1 if allocation fails.
+//! A failure preserves changes from sources merged before the failed allocation.
 API_EXPORT(int) hist_accumulate(histogram_t *tgt, const histogram_t * const *src, int cnt);
 //! Subtract bins from each of cnt histograms in src from tgt, return -1 on underrun error
 API_EXPORT(int) hist_subtract(histogram_t *tgt, const histogram_t * const *src, int cnt);
@@ -248,7 +250,7 @@ API_EXPORT(uint64_t) hist_approx_count_below(const histogram_t *hist, double thr
 API_EXPORT(uint64_t) hist_approx_count_below_inclusive(const histogram_t *hist, double threshold);
 
 //! Count samples in buckets at or below each threshold's bucket.
-//! The thresholds must be sorted in ascending order.
+//! The thresholds must be finite, representable, and sorted in ascending order.
 //! \param hist
 //! \param thresholds sorted threshold values
 //! \param count number of thresholds
