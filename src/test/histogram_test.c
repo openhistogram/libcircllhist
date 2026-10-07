@@ -580,7 +580,7 @@ fast_accumulate_index_case(const double *target_values, int target_count,
   isf(rv == hist_bucket_count(target), "%s",
       "accumulation should return the target bucket count");
 
-  /* Exercise the fast lookup for every bucket after accumulation. */
+  // Exercise the fast lookup for every bucket after accumulation.
   for(int value = 1; value <= 9; value++)
     hist_insert(target, value, 1);
 
