@@ -1566,8 +1566,9 @@ hist_accumulate_one(histogram_t *tgt, const histogram_t *src) {
   int tgt_idx = 0;
   int src_idx = 0;
   int matching_bucket_count = 0;
+  int first_new_bucket_idx = tgt->used + src->used;
 
-  // count matching buckets so we can calculate target size
+  // Count matching buckets and find the first new output bucket.
   while(tgt_idx < tgt->used && src_idx < src->used) {
     int cmp = hist_bucket_cmp(tgt->bvs[tgt_idx].bucket,
                               src->bvs[src_idx].bucket);
@@ -1576,9 +1577,21 @@ hist_accumulate_one(histogram_t *tgt, const histogram_t *src) {
       tgt_idx++;
       src_idx++;
     }
-    else if(cmp > 0) tgt_idx++;
-    else src_idx++;
+    else if(cmp > 0) {
+      // The target bucket precedes the source bucket.
+      tgt_idx++;
+    }
+    else {
+      // The source bucket is new at target position tgt_idx.
+      if(tgt_idx < first_new_bucket_idx)
+        first_new_bucket_idx = tgt_idx;
+      src_idx++;
+    }
   }
+
+  // The target is exhausted. Any remaining source bucket is new.
+  if(src_idx < src->used && tgt_idx < first_new_bucket_idx)
+    first_new_bucket_idx = tgt_idx;
 
   int result_bucket_count = tgt->used + src->used - matching_bucket_count;
   if(hist_reserve(tgt, result_bucket_count) < 0) return -1;
@@ -1604,6 +1617,9 @@ hist_accumulate_one(histogram_t *tgt, const histogram_t *src) {
   while(tgt_idx > 0) tgt->bvs[--write_idx] = tgt->bvs[--tgt_idx];
   assert(write_idx == 0);
   tgt->used = result_bucket_count;
+  // Accumulation only adds buckets, so mappings before first_new_bucket_idx remain valid.
+  if(tgt->fast && first_new_bucket_idx < result_bucket_count)
+    hist_fast_rebuild(tgt, first_new_bucket_idx, 0);
   return 0;
 }
 

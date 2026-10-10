@@ -120,12 +120,13 @@ bucket_at(int idx) {
  * growth at either end of the bucket range.
  */
 static void
-benchmark_accumulate_growth(const char *order, bool ascending,
+benchmark_accumulate_growth(const char *hist_type, const char *order, bool ascending,
+                            halloc_func target_alloc,
                             const char *accumulate_type, accumulate_fn accumulate) {
   const int max_buckets = 2 + 2 * 90 * 256;
   struct timeval start, finish;
   histogram_t *source = hist_alloc_nbins(1);
-  histogram_t *target = hist_alloc();
+  histogram_t *target = target_alloc();
   const histogram_t *sources[] = { source };
 
   gettimeofday(&start, NULL);
@@ -140,8 +141,8 @@ benchmark_accumulate_growth(const char *order, bool ascending,
   if(hist_num_buckets(target) != max_buckets) abort();
   double elapsed = finish.tv_sec - start.tv_sec;
   elapsed += (finish.tv_usec/1000000.0) - (start.tv_usec/1000000.0);
-  printf("accumulate-growth-worst,%s,%s,%d,%0.0f,%0.2f\n",
-         order, accumulate_type, max_buckets, elapsed * 1000000000.0,
+  printf("accumulate-growth-worst,%s,%s,%s,%d,%0.0f,%0.2f\n",
+         hist_type, order, accumulate_type, max_buckets, elapsed * 1000000000.0,
          (elapsed / max_buckets) * 1000000000.0);
 
   hist_free(target);
@@ -334,6 +335,12 @@ int main() {
     }
   }
 
-  benchmark_accumulate_growth("ascending", true, "accumulate", hist_accumulate);
-  benchmark_accumulate_growth("descending", false, "accumulate", hist_accumulate);
+  for (int fast = 0; fast < 2; ++fast) {
+    const char *hist_type = fast ? "fast" : "normal";
+    halloc_func target_alloc = fast ? hist_fast_alloc : hist_alloc;
+    benchmark_accumulate_growth(hist_type, "ascending", true, target_alloc,
+                                "accumulate", hist_accumulate);
+    benchmark_accumulate_growth(hist_type, "descending", false, target_alloc,
+                                "accumulate", hist_accumulate);
+  }
 }
