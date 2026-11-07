@@ -238,6 +238,13 @@ struct histogram_fast {
   struct histogram internal;
   uint16_t *faster[256];
 };
+
+struct hist_prepared_bounds {
+  hist_allocator_t allocator;
+  double *bounds;
+  hist_bucket_t *bound_buckets;
+  int bound_count;
+};
 uint64_t bvl_limits[7] = {
   0x00000000000000ffULL, 0x0000000000000ffffULL,
   0x0000000000ffffffULL, 0x00000000fffffffffULL,
@@ -749,6 +756,126 @@ hist_approx_summary(const histogram_t *hist, const double *bounds, int bound_cou
   }
 
   while (bound_idx < bound_count)
+    cumulative_counts[bound_idx++] = running_count;
+  return result;
+}
+
+hist_prepared_bounds_t *
+hist_prepared_bounds_alloc_with_allocator(const double *bounds, int bound_count,
+                                          const hist_allocator_t *allocator) {
+  if (bound_count < 0 || (bound_count > 0 && !bounds)) return NULL;
+  if (!allocator || !allocator->calloc || !allocator->malloc || !allocator->free)
+    return NULL;
+  if ((size_t)bound_count > SIZE_MAX / sizeof(double) ||
+      (size_t)bound_count > SIZE_MAX / sizeof(hist_bucket_t))
+    return NULL;
+  for (int i = 0; i < bound_count; ++i) {
+    if (isnan(bounds[i]) || (i > 0 && bounds[i - 1] > bounds[i])) return NULL;
+  }
+
+  hist_prepared_bounds_t *prepared = allocator->calloc(1, sizeof(*prepared));
+  if (!prepared) return NULL;
+  prepared->allocator = *allocator;
+  prepared->bound_count = bound_count;
+  if (bound_count > 0) {
+    prepared->bounds = allocator->malloc((size_t)bound_count * sizeof(*prepared->bounds));
+    prepared->bound_buckets = allocator->malloc(
+        (size_t)bound_count * sizeof(*prepared->bound_buckets));
+    if (!prepared->bounds || !prepared->bound_buckets) {
+      if (prepared->bounds) allocator->free(prepared->bounds);
+      if (prepared->bound_buckets) allocator->free(prepared->bound_buckets);
+      allocator->free(prepared);
+      return NULL;
+    }
+    for (int i = 0; i < bound_count; ++i) {
+      prepared->bounds[i] = bounds[i];
+      prepared->bound_buckets[i] = isinf(bounds[i])
+          ? (hist_bucket_t){ 0, 0 } : double_to_hist_bucket(bounds[i]);
+    }
+  }
+  return prepared;
+}
+
+hist_prepared_bounds_t *
+hist_prepared_bounds_alloc(const double *bounds, int bound_count) {
+  return hist_prepared_bounds_alloc_with_allocator(bounds, bound_count, &default_allocator);
+}
+
+void
+hist_prepared_bounds_free(hist_prepared_bounds_t *prepared) {
+  if (!prepared) return;
+  if (prepared->bounds) prepared->allocator.free(prepared->bounds);
+  if (prepared->bound_buckets) prepared->allocator.free(prepared->bound_buckets);
+  prepared->allocator.free(prepared);
+}
+
+hist_approx_summary_t
+hist_approx_summary_prepared(const histogram_t *hist,
+                                   const hist_prepared_bounds_t *prepared,
+                                   uint64_t *cumulative_counts,
+                                   uint64_t *out_of_bound_count) {
+  hist_approx_summary_t result = {
+    .status = 0,
+    .sample_count = 0,
+    .sample_sum = 0.0,
+    .sample_sum_squares = 0.0
+  };
+  uint64_t running_count = 0;
+  int bound_idx = 0;
+
+  if (!prepared || prepared->bound_count < 0 ||
+      (prepared->bound_count > 0 &&
+       (!prepared->bounds || !prepared->bound_buckets || !cumulative_counts))) {
+    result.status = -1;
+    return result;
+  }
+  for (int i = 0; i < prepared->bound_count; ++i)
+    cumulative_counts[i] = 0;
+  if (out_of_bound_count) *out_of_bound_count = 0;
+  if (!hist) return result;
+
+  ASSERT_GOOD_HIST(hist);
+  for (int i = 0; i < hist->used; ++i) {
+    hist_bucket_t bucket = hist->bvs[i].bucket;
+    uint64_t bucket_count = hist->bvs[i].count;
+
+    uint64_t previous_count = result.sample_count;
+    result.sample_count += bucket_count;
+    if (result.sample_count < previous_count) result.sample_count = UINT64_MAX;
+    if (hist_bucket_isnan(bucket)) continue;
+
+    while (bound_idx < prepared->bound_count) {
+      if (prepared->bounds[bound_idx] == -INFINITY) {
+        cumulative_counts[bound_idx++] = running_count;
+        continue;
+      }
+      if (prepared->bounds[bound_idx] == INFINITY) break;
+      // hist_bucket_cmp() returns positive when its first bucket is lower.
+      if (hist_bucket_cmp(prepared->bound_buckets[bound_idx], bucket) > 0) {
+        cumulative_counts[bound_idx++] = running_count;
+        continue;
+      }
+      break;
+    }
+
+    if (out_of_bound_count &&
+        (prepared->bound_count == 0 ||
+         (prepared->bounds[prepared->bound_count - 1] != INFINITY &&
+          bound_idx == prepared->bound_count))) {
+      uint64_t previous_out_of_bound_count = *out_of_bound_count;
+      *out_of_bound_count += bucket_count;
+      if (*out_of_bound_count < previous_out_of_bound_count)
+        *out_of_bound_count = UINT64_MAX;
+    }
+    running_count += bucket_count;
+    if (running_count < bucket_count) running_count = UINT64_MAX;
+    double midpoint = hist_bucket_midpoint(bucket);
+    double weighted_midpoint = midpoint * (double)bucket_count;
+    result.sample_sum += weighted_midpoint;
+    result.sample_sum_squares += midpoint * weighted_midpoint;
+  }
+
+  while (bound_idx < prepared->bound_count)
     cumulative_counts[bound_idx++] = running_count;
   return result;
 }

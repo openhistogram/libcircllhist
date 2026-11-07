@@ -193,6 +193,35 @@ benchmark_summary(const char *hist_type, const char *path, const histogram_t *hi
 }
 
 static void
+benchmark_summary_prepared(const char *hist_type, const histogram_t *hist,
+                           const double *bounds, int bound_count, int iter) {
+  uint64_t cumulative[sizeof(summary_bounds) / sizeof(*summary_bounds)];
+  hist_prepared_bounds_t *prepared = hist_prepared_bounds_alloc(bounds, bound_count);
+  struct timeval start, finish;
+  uint64_t total = 0;
+  uint64_t overflow = 0;
+  double sum = 0.0;
+
+  assert(prepared != NULL);
+  gettimeofday(&start, NULL);
+  for (int i = 0; i < iter; ++i) {
+    hist_approx_summary_t result =
+        hist_approx_summary_prepared(hist, prepared, cumulative, &overflow);
+    assert(result.status == 0);
+    total = result.sample_count;
+    sum = result.sample_sum;
+    summary_sink += total + overflow + cumulative[bound_count - 1] + (uint64_t)sum;
+  }
+  gettimeofday(&finish, NULL);
+  hist_prepared_bounds_free(prepared);
+
+  double elapsed = finish.tv_sec - start.tv_sec;
+  elapsed += (finish.tv_usec / 1000000.0) - (start.tv_usec / 1000000.0);
+  printf("summary-prepared,%s,%d,%d,%0.2f\n", hist_type, hist_num_buckets(hist),
+         iter, (elapsed / (double)iter) * 1000000000.0);
+}
+
+static void
 benchmark_summary_percent(const char *hist_type, const char *path, const histogram_t *hist,
                           const double *bounds, int bound_count, double scale, int iter) {
   double scaled_bounds[sizeof(summary_bounds) / sizeof(*summary_bounds)];
@@ -327,6 +356,8 @@ int main() {
                         sizeof(summary_bounds) / sizeof(*summary_bounds), iter);
       benchmark_summary(hist_type, "fused", hist, summary_bounds,
                         sizeof(summary_bounds) / sizeof(*summary_bounds), iter);
+      benchmark_summary_prepared(hist_type, hist, summary_bounds,
+                                 sizeof(summary_bounds) / sizeof(*summary_bounds), iter);
       benchmark_summary_percent(hist_type, "separate", hist, summary_bounds,
                                 sizeof(summary_bounds) / sizeof(*summary_bounds), 100.0, iter);
       benchmark_summary_percent(hist_type, "fused", hist, summary_bounds,

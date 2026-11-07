@@ -41,6 +41,7 @@ extern "C" { /* FFI_SKIP */
 #include <stdint.h>
 
 typedef struct histogram histogram_t;
+typedef struct hist_prepared_bounds hist_prepared_bounds_t;
 typedef struct hist_rollup_config hist_rollup_config_t;
 //! A hist_bucket structure represents a histogram bucket with the following
 //! dimensions:
@@ -224,12 +225,35 @@ typedef struct {
 //! the complete histogram bucket containing its corresponding bound. This uses
 //! the same approximation as hist_approx_count_below_inclusive_many().
 //!
+//! If the same bounds will be used many times, consider using the prepared
+//! calls instead for efficiency.
+//!
 //! The result status is zero on success and negative on invalid arguments.
 //! The caller owns cumulative_counts, which must contain bound_count elements.
 API_EXPORT(hist_approx_summary_t) hist_approx_summary(const histogram_t *hist,
                                                        const double *bounds,
                                                        int bound_count,
                                                        uint64_t *cumulative_counts);
+//! Prepare immutable, reusable histogram bounds using the default allocator.
+//! The bounds must be sorted in ascending order and must not contain NaN.
+//! The prepared object copies the bounds and accepts infinities.
+//! Returns NULL for invalid arguments or allocation failure.
+API_EXPORT(hist_prepared_bounds_t *) hist_prepared_bounds_alloc(
+    const double *bounds, int bound_count);
+//! Prepare immutable, reusable histogram bounds using a custom allocator.
+//! The allocator is copied. Its functions and any state they use must remain
+//! valid until hist_prepared_bounds_free().
+API_EXPORT(hist_prepared_bounds_t *) hist_prepared_bounds_alloc_with_allocator(
+    const double *bounds, int bound_count, const hist_allocator_t *allocator);
+//! Free prepared bounds with the allocator selected during preparation.
+API_EXPORT(void) hist_prepared_bounds_free(hist_prepared_bounds_t *prepared);
+//! Compute a summary using prepared bounds. Each cumulative count includes the
+//! complete histogram bucket containing its bound. The output count excludes
+//! samples in the NaN bucket. It includes all non-NaN samples when there are no
+//! bounds and is zero when the final bound is +INFINITY.
+API_EXPORT(hist_approx_summary_t) hist_approx_summary_prepared(
+    const histogram_t *hist, const hist_prepared_bounds_t *prepared,
+    uint64_t *cumulative_counts, uint64_t *out_of_bound_count);
 //! Approximate the k-th moment of all values stored in the histogram
 //! \param hist
 //! \param k
